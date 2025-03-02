@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Another Product Invented - Royal Game of Ur</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Base Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    h1 {
+      margin: 1rem 0 0.5rem;
+      text-align: center;
+      line-height: 1.2;
+    }
+    /* Container & Canvas */
+    #gameContainer {
+      position: relative;
+      width: 600px;
+      max-width: 100%;
+      margin-bottom: 10px;
+    }
+    canvas {
+      display: block;
+      background: #eee;
+      width: 100%;
+      height: auto;
+      border: 2px solid #333;
+      touch-action: none;
+    }
+    /* Overlays */
+    .overlayScreen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 10;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    button {
+      font-size: 18px;
+      margin: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    /* Bottom Bar */
+    #bottomBar {
+      width: 600px;
+      max-width: 100%;
+      background: #fff;
+      border-top: 1px solid #ccc;
+      display: none;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 10px;
+      box-sizing: border-box;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Another Product Invented<br>Royal Game of Ur</h1>
+
+  <!-- Game Container -->
+  <div id="gameContainer">
+    <div id="menuScreen" class="overlayScreen" style="display: flex;">
+      <button id="newGameBtn">New Game</button>
+      <button id="instructionsBtn">Instructions</button>
+    </div>
+    <div id="colorScreen" class="overlayScreen">
+      <p>Choose Your Side:</p>
+      <button id="lightSideBtn">Light Pieces [L]</button>
+      <button id="darkSideBtn">Dark Pieces [D]</button>
+    </div>
+    <div id="difficultyScreen" class="overlayScreen">
+      <p>Select Difficulty:</p>
+      <button id="easyBtn">Easy [E]</button>
+      <button id="mediumBtn">Medium [M]</button>
+      <button id="hardBtn">Hard [H]</button>
+    </div>
+    <div id="instructionsScreen" class="overlayScreen">
+      <h2>How to Play the Royal Game of Ur</h2>
+      <p>
+        Move all your pieces to the end before your opponent.<br>
+        Roll four dice (each die has a 50% chance of +1).<br>
+        Pieces move along the track and can capture opponent pieces.<br>
+        Special marked squares offer extra moves or safety.<br>
+        First player to move all pieces off the board wins.
+      </p>
+      <p>Press [M] to return to the Main Menu.</p>
+    </div>
+    <div id="gameOverScreen" class="overlayScreen">
+      <h2 id="gameOverText"></h2>
+      <button id="gameOverNewGameBtn">New Game</button>
+    </div>
+    <canvas id="urCanvas" width="600" height="400"></canvas>
+  </div>
+  <div id="bottomBar">
+    <span id="turnDisplay">Turn: </span>
+    <span id="diceDisplay" style="margin-left: 20px;">Dice: </span>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("urCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let gameState = "menu";
+    let playerSide = "light";  
+    let difficulty = "easy";
+    let currentPlayer = "light";
+    let dice = [];
+    let playerPieces = [0, 0, 0, 0, 0, 0, 0]; 
+    let aiPieces = [0, 0, 0, 0, 0, 0, 0];
+
+    function showMenu() {
+        hideAllScreens();
+        gameState = "menu";
+        document.getElementById("menuScreen").style.display = "flex";
+        document.getElementById("bottomBar").style.display = "none";
+    }
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() === "m") {
+            if (gameState !== "menu") {
+                showMenu();
+            }
+        }
+    });
+
+    function rollDice() {
+        dice = Array(4).fill(0).map(() => Math.random() < 0.5 ? 0 : 1);
+        document.getElementById("diceDisplay").textContent = "Dice: " + dice.reduce((sum, d) => sum + d, 0);
+    }
+
+    function drawBoard() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#F5DEB3";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#000";
+        ctx.font = "20px Arial";
+        ctx.fillText("Turn: " + currentPlayer, 10, 20);
+        ctx.fillText("Dice: " + dice.reduce((sum, d) => sum + d, 0), 10, 50);
+    }
+
+    function hideAllScreens() {
+        document.querySelectorAll(".overlayScreen").forEach(el => el.style.display = "none");
+    }
+
+    function startGame(selectedDifficulty) {
+        hideAllScreens();
+        gameState = "playing";
+        difficulty = selectedDifficulty;
+        rollDice();
+        drawBoard();
+        document.getElementById("bottomBar").style.display = "flex";
+    }
+
+    function aiMove() {
+        if (difficulty === "easy") {
+            aiPieces[Math.floor(Math.random() * aiPieces.length)] += dice.reduce((sum, d) => sum + d, 0);
+        } else if (difficulty === "medium") {
+            aiPieces.sort((a, b) => a - b)[0] += dice.reduce((sum, d) => sum + d, 0);
+        } else {
+            aiPieces[aiPieces.indexOf(Math.min(...aiPieces))] += dice.reduce((sum, d) => sum + d, 0);
+        }
+        switchTurn();
+    }
+
+    function switchTurn() {
+        currentPlayer = currentPlayer === "light" ? "dark" : "light";
+        if (currentPlayer !== playerSide) {
+            setTimeout(aiMove, 1000);
+        }
+        drawBoard();
+    }
+
+    document.getElementById("newGameBtn").onclick = () => document.getElementById("colorScreen").style.display = "flex";
+    document.getElementById("lightSideBtn").onclick = () => { playerSide = "light"; document.getElementById("difficultyScreen").style.display = "flex"; };
+    document.getElementById("darkSideBtn").onclick = () => { playerSide = "dark"; document.getElementById("difficultyScreen").style.display = "flex"; };
+    document.getElementById("easyBtn").onclick = () => startGame("easy");
+    document.getElementById("mediumBtn").onclick = () => startGame("medium");
+    document.getElementById("hardBtn").onclick = () => startGame("hard");
+    document.getElementById("instructionsBtn").onclick = () => document.getElementById("instructionsScreen").style.display = "flex";
+
+    drawBoard();
+    showMenu();
+  </script>
+</body>
+</html>
