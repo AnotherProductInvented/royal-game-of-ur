@@ -143,46 +143,45 @@
 <img id="logo" src="logo.png" alt="Logo">
 
 <script>
-  /***** Board Layout *****
-    We use a 3×8 grid but only 20 cells are used.
-    The layout (reading row-wise, skipping gaps) is:
-      Row 0: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
-      Row 1: All 8 cells used; cell 4 is a rosette.
-      Row 2: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
-  *****/
+  /***** Setup & Board Layout *****/
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
   const SQUARE_SIZE = 80; // Each cell is 80×80
+  const canvasWidth = canvas.width;
+  const canvasHeight = canvas.height;
 
-  // Define the 20 squares with their (x,y) positions, width, height, and rosette flag.
+  // Board layout based on a 3×8 grid with gaps:
+  // Row 0: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
+  // Row 1: All 8 cells used; cell 4 is a rosette.
+  // Row 2: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
   const boardSquares = [
     // Row 0 (y = 0)
-    { x: 0,   y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 0 ("1")
-    { x: 80,  y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 1 ("rosette")
-    // Columns 2 and 3 are gaps; next square at col4:
-    { x: 320, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 2 ("1")
-    { x: 400, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 3 ("1")
-    { x: 480, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 4 ("1")
-    { x: 560, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 5 ("rosette")
+    { x: 0,   y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 0
+    { x: 80,  y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 1
+    // Gap: columns 2 and 3 are skipped; next defined at x=320.
+    { x: 320, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 2
+    { x: 400, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 3
+    { x: 480, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 4
+    { x: 560, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 5
 
-    // Row 1 (y = 80) – all 8 columns used; col4 is rosette.
+    // Row 1 (y = 80) – all 8 cells used; cell at col4 is a rosette.
     { x: 0,   y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 6
     { x: 80,  y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 7
     { x: 160, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 8
     { x: 240, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 9
-    { x: 320, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 10 ("rosette")
+    { x: 320, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 10
     { x: 400, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 11
     { x: 480, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 12
     { x: 560, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 13
 
     // Row 2 (y = 160)
     { x: 0,   y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 14
-    { x: 80,  y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 15 ("rosette")
-    // Columns 2 and 3 are gaps; next square at col4:
+    { x: 80,  y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 15
+    // Gap: skip columns 2 and 3; next defined at x=320.
     { x: 320, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 16
     { x: 400, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 17
     { x: 480, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 18
-    { x: 560, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }  // index 19 ("rosette")
+    { x: 560, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }  // index 19
   ];
 
   /***** Game State Variables *****/
@@ -196,8 +195,7 @@
   const debugMode = true;
 
   // Each player has 7 pieces.
-  // A piece’s position is a number in [-1, 20] where:
-  //   -1: off-board, 0..19: index in boardSquares, 20: finished.
+  // Piece positions are numbers in [-1, 20]: -1 means off-board, 0-19 are indices in boardSquares, 20 means finished.
   const NUM_PIECES = 7;
   let whitePieces = [];
   let blackPieces = [];
@@ -236,21 +234,21 @@
   function drawBoard() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     boardSquares.forEach((sq, i) => {
-      // Safety check: ensure width and height are finite.
+      // Safety check for width and height
       if (!isFinite(sq.w)) sq.w = SQUARE_SIZE;
       if (!isFinite(sq.h)) sq.h = SQUARE_SIZE;
       
-      // Create a linear gradient for a professional tile look.
+      // Create a linear gradient for a polished tile look.
       let grad = ctx.createLinearGradient(sq.x, sq.y, sq.x + sq.w, sq.y + sq.h);
-      grad.addColorStop(0, "#e6c87d"); // gold-ish
-      grad.addColorStop(1, "#4e6fa3"); // blue-ish
-
+      grad.addColorStop(0, "#e6c87d");
+      grad.addColorStop(1, "#4e6fa3");
+      
       ctx.fillStyle = grad;
       ctx.fillRect(sq.x, sq.y, sq.w, sq.h);
       ctx.strokeStyle = "#000";
       ctx.lineWidth = 2;
       ctx.strokeRect(sq.x, sq.y, sq.w, sq.h);
-
+      
       // If this square is a rosette, draw a fancy design.
       if (sq.rosette) {
         ctx.save();
@@ -297,7 +295,7 @@
       ctx.stroke();
       ctx.restore();
     });
-
+    
     // Draw black pieces with a dark gradient.
     blackPieces.forEach(pos => {
       if (pos < 0 || pos >= 20) return;
@@ -343,12 +341,11 @@
     drawUI();
   }
 
-  /***** Game Logic *****/
+  /***** Game Logic Functions *****/
   function getValidMove(piecePos, diceValue, ownPieces, oppPieces) {
     if (diceValue === 0) return null;
     let newPos = (piecePos === -1) ? 0 : piecePos + diceValue;
-    if (newPos > 20) return null; // overshoot
-
+    if (newPos > 20) return null;
     if (newPos < 20 && ownPieces.includes(newPos)) return null;
     if (newPos < 20 && oppPieces.includes(newPos)) {
       if (boardSquares[newPos].rosette) return null;
@@ -455,7 +452,7 @@
     if (gameState !== "playing") return;
     if (currentTurn === humanColor) return;
     aiThinking = true;
-    loadingOverlay.style.display = "flex";
+    document.getElementById("loadingOverlay").style.display = "flex";
     setTimeout(() => {
       currentDiceRoll = rollDice();
       diceRolled = true;
@@ -470,7 +467,7 @@
         currentTurn = (currentTurn === "w") ? "b" : "w";
       }
       aiThinking = false;
-      loadingOverlay.style.display = "none";
+      document.getElementById("loadingOverlay").style.display = "none";
       redrawPlayScreen();
     }, 1500);
   }
@@ -479,9 +476,9 @@
     if (gameState === "playing") {
       redrawPlayScreen();
       if (currentTurn === humanColor && !diceRolled) {
-        rollDiceBtn.style.display = "block";
+        document.getElementById("rollDiceBtn").style.display = "block";
       } else {
-        rollDiceBtn.style.display = "none";
+        document.getElementById("rollDiceBtn").style.display = "none";
       }
       if (currentTurn !== humanColor && !diceRolled && !aiThinking) {
         aiMove();
@@ -490,33 +487,33 @@
     requestAnimationFrame(mainLoop);
   }
 
-  /***** Overlay & Navigation *****/
+  /***** Overlay & Navigation Functions *****/
   function hideAllScreens() {
-    menuScreen.style.display = "none";
-    instructionsScreen.style.display = "none";
-    sideScreen.style.display = "none";
-    gameOverScreen.style.display = "none";
+    document.getElementById("menuScreen").style.display = "none";
+    document.getElementById("instructionsScreen").style.display = "none";
+    document.getElementById("sideScreen").style.display = "none";
+    document.getElementById("gameOverScreen").style.display = "none";
   }
   function showMenu() {
     hideAllScreens();
     gameState = "menu";
-    menuScreen.style.display = "flex";
+    document.getElementById("menuScreen").style.display = "flex";
   }
   function showInstructions() {
     hideAllScreens();
     gameState = "instructions";
-    instructionsScreen.style.display = "flex";
+    document.getElementById("instructionsScreen").style.display = "flex";
   }
   function showSideSelect() {
     hideAllScreens();
     gameState = "selectSide";
-    sideScreen.style.display = "flex";
+    document.getElementById("sideScreen").style.display = "flex";
   }
   function startPlaying() {
     hideAllScreens();
     gameState = "playing";
     initPieces();
-    currentTurn = "w";  // White always starts
+    currentTurn = "w"; // White always starts
     diceRolled = false;
     currentDiceRoll = 0;
     extraTurn = false;
@@ -524,17 +521,16 @@
   function showGameOver() {
     hideAllScreens();
     gameState = "gameover";
-    gameOverScreen.style.display = "flex";
+    document.getElementById("gameOverScreen").style.display = "flex";
   }
 
-  // Button / Keyboard handlers
+  // Button and Keyboard Handlers
   document.getElementById("newGameBtn").onclick = () => showSideSelect();
   document.getElementById("instructionsBtn").onclick = () => showInstructions();
   document.getElementById("whiteSideBtn").onclick = () => { humanColor = "w"; startPlaying(); };
   document.getElementById("blackSideBtn").onclick = () => { humanColor = "b"; startPlaying(); };
   document.getElementById("gameOverNewGameBtn").onclick = () => showSideSelect();
-  rollDiceBtn.addEventListener("click", humanRollDice);
-
+  document.getElementById("rollDiceBtn").addEventListener("click", humanRollDice);
   document.addEventListener("keydown", (e) => {
     const key = e.key.toLowerCase();
     if (gameState === "selectSide") {
@@ -554,7 +550,6 @@
       }
     }
   });
-
   canvas.addEventListener("mousedown", handleBoardClick);
 
   function startAll() {
