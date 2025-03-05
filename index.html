@@ -143,22 +143,25 @@
 <img id="logo" src="logo.png" alt="Logo">
 
 <script>
-  /***** Setup & Board Layout *****/
+  // Define canvas variables in the global scope.
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
-  const SQUARE_SIZE = 80; // Each cell is 80×80
   const canvasWidth = canvas.width;
   const canvasHeight = canvas.height;
+  const SQUARE_SIZE = 80; // Each cell is 80×80
 
-  // Board layout based on a 3×8 grid with gaps:
-  // Row 0: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
-  // Row 1: All 8 cells used; cell 4 is a rosette.
-  // Row 2: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
+  /***** Board Layout *****
+    We use a 3×8 grid with gaps so that only 20 squares exist.
+    Layout (row-wise, skipping gaps):
+      Row 0: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
+      Row 1: All 8 cells used; cell at col4 is a rosette.
+      Row 2: "1", "rosette", gap, gap, "1", "1", "1", "rosette"
+  *****/
   const boardSquares = [
     // Row 0 (y = 0)
     { x: 0,   y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 0
     { x: 80,  y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 1
-    // Gap: columns 2 and 3 are skipped; next defined at x=320.
+    // Gap for columns 2 and 3; next defined at x = 320.
     { x: 320, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 2
     { x: 400, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 3
     { x: 480, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 4
@@ -177,7 +180,7 @@
     // Row 2 (y = 160)
     { x: 0,   y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 14
     { x: 80,  y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 15
-    // Gap: skip columns 2 and 3; next defined at x=320.
+    // Gap for columns 2 and 3; next defined at x = 320.
     { x: 320, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 16
     { x: 400, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 17
     { x: 480, y: 160, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 18
@@ -195,7 +198,7 @@
   const debugMode = true;
 
   // Each player has 7 pieces.
-  // Piece positions are numbers in [-1, 20]: -1 means off-board, 0-19 are indices in boardSquares, 20 means finished.
+  // Piece positions: -1 means off-board; 0–19 correspond to boardSquares; 20 means finished.
   const NUM_PIECES = 7;
   let whitePieces = [];
   let blackPieces = [];
@@ -208,7 +211,7 @@
   /***** Utility & Debug Functions *****/
   function rollDice() {
     let total = 0;
-    for (let i = 0; i < 4; i++){
+    for (let i = 0; i < 4; i++) {
       total += Math.floor(Math.random() * 2);
     }
     return total;
@@ -234,7 +237,7 @@
   function drawBoard() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     boardSquares.forEach((sq, i) => {
-      // Safety check for width and height
+      // Safety check: ensure width and height are numbers.
       if (!isFinite(sq.w)) sq.w = SQUARE_SIZE;
       if (!isFinite(sq.h)) sq.h = SQUARE_SIZE;
       
@@ -249,10 +252,10 @@
       ctx.lineWidth = 2;
       ctx.strokeRect(sq.x, sq.y, sq.w, sq.h);
       
-      // If this square is a rosette, draw a fancy design.
+      // Draw rosette design if applicable.
       if (sq.rosette) {
         ctx.save();
-        ctx.translate(sq.x + sq.w/2, sq.y + sq.h/2);
+        ctx.translate(sq.x + sq.w / 2, sq.y + sq.h / 2);
         ctx.beginPath();
         ctx.arc(0, 0, 15, 0, Math.PI * 2);
         ctx.fillStyle = "red";
@@ -260,7 +263,7 @@
         ctx.strokeStyle = "#fff";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        for (let arm = 0; arm < 8; arm++){
+        for (let arm = 0; arm < 8; arm++) {
           ctx.moveTo(0, 0);
           let angle = (Math.PI * 2) * (arm / 8);
           ctx.lineTo(Math.cos(angle) * 15, Math.sin(angle) * 15);
@@ -524,13 +527,14 @@
     document.getElementById("gameOverScreen").style.display = "flex";
   }
 
-  // Button and Keyboard Handlers
+  // Button / Keyboard Handlers
   document.getElementById("newGameBtn").onclick = () => showSideSelect();
   document.getElementById("instructionsBtn").onclick = () => showInstructions();
   document.getElementById("whiteSideBtn").onclick = () => { humanColor = "w"; startPlaying(); };
   document.getElementById("blackSideBtn").onclick = () => { humanColor = "b"; startPlaying(); };
   document.getElementById("gameOverNewGameBtn").onclick = () => showSideSelect();
   document.getElementById("rollDiceBtn").addEventListener("click", humanRollDice);
+  
   document.addEventListener("keydown", (e) => {
     const key = e.key.toLowerCase();
     if (gameState === "selectSide") {
@@ -550,8 +554,9 @@
       }
     }
   });
+  
   canvas.addEventListener("mousedown", handleBoardClick);
-
+  
   function startAll() {
     showMenu();
     requestAnimationFrame(mainLoop);
