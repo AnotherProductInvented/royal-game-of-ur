@@ -200,39 +200,39 @@ const boardWidth = 400, boardHeight = 150;
 const boardMarginX = (canvasWidth - boardWidth)/2; 
 const boardMarginY = (canvasHeight - boardHeight)/2; 
 
-// We have 20 squares physically, now with rosettes EXACTLY where you want them
-// (restoring them to #4, #8, #14, #19, for example)
+// Rosettes on snippet-labeled squares: 4 (#5), 20 (#19), 14 (#1), 16 (#15), 8 (#10)
+// But physically we want them on #1, #5, #10, #15, #19
 const boardSquares = [
   // top row
   { x:0,   y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #0 => "13"
-  { x:50,  y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #1 => "14"
+  { x:50,  y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }, // #1 => "14" (rosette)
   { x:200, y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #2 => "1"
   { x:250, y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #3 => "2"
-  { x:300, y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }, // #4 => "3"
-  { x:350, y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #5 => "4"
+  { x:300, y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #4 => "3"
+  { x:350, y:0,   w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }, // #5 => "4" (rosette)
 
   // middle row
   { x:0,   y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #6 => "12"
   { x:50,  y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #7 => "11"
-  { x:100, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }, // #8 => "10" (restored rosette)
+  { x:100, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #8 => "10"
   { x:150, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #9 => "9"
-  { x:200, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #10 => "8" (no rosette now)
+  { x:200, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }, // #10 => "8" (rosette)
   { x:250, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #11 => "7"
   { x:300, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #12 => "6"
   { x:350, y:50,  w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #13 => "5"
 
   // bottom row
-  { x:0,   y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }, // #14 => "15" (restored rosette)
-  { x:50,  y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #15 => "16"
+  { x:0,   y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #14 => "15"
+  { x:50,  y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }, // #15 => "16" (rosette)
   { x:200, y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #16 => "17"
   { x:250, y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #17 => "18"
   { x:300, y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:false }, // #18 => "19"
-  { x:350, y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }  // #19 => "20" (restored rosette)
+  { x:350, y:100, w:SQUARE_SIZE, h:SQUARE_SIZE, rosette:true  }  // #19 => "20" (rosette)
 ];
 
 // White path (1..14) => physically [2,3,4,5, 6,7,8,9,10,11,12,13, 0,1]
 const whitePath = [2,3,4,5, 6,7,8,9,10,11,12,13, 0,1];
-// Black path => (17..20 => squares #16..#19, then 5..12 => squares #13..#6, then 15..16 => squares #14..#15)
+// Black path => (17..20 => squares #16..#19, then 5..12 => squares #13..#6, then 15..16 => squares #14..#15
 const blackPath = [16,17,18,19, 13,12,11,10,9,8,7,6, 14,15];
 
 /***********************************
@@ -298,7 +298,7 @@ function initPieces() {
 }
 function rollDice() {
   let total=0;
-  for(let i=0; i<4; i++){
+  for(let i=0;i<4;i++){
     total += Math.floor(Math.random()*2);
   }
   return total;
@@ -322,7 +322,7 @@ function getValidMove(piecePos, diceValue, color) {
     }
     pathIndex= idx;
   } else if(piecePos===20) {
-    return null; // finished
+    return null;
   }
   let newIndex= pathIndex + diceValue;
   if(newIndex> path.length) return null;
@@ -374,7 +374,6 @@ function executeMove(pieceIndex, toPos, color) {
     } else {
       extraTurn= false;
     }
-    // check if all 7 pieces are finished => gameover
     let finishedCount= own.filter(p=> p===20).length;
     if(finishedCount===NUM_PIECES){
       gameState="gameover";
@@ -498,7 +497,7 @@ function drawPieces(){
     ctx.restore();
   });
 }
-// We'll keep the bottom bar blank, so no running totals
+// We'll keep the bottom bar blank
 function drawUI(){
   ctx.fillStyle= "#f5f2e8";
   ctx.fillRect(0, canvasHeight-30, canvasWidth, 30);
@@ -551,7 +550,6 @@ function handleBoardClick(e){
 /***********************************
  * 9) Dice Rolling & AI
  **********************************/
-// Show a 2s overlay sign
 function showTemporaryMessage(msg){
   diceMessageOverlay.textContent= msg;
   diceMessageOverlay.style.display= "block";
@@ -613,7 +611,6 @@ function aiMove(){
 function mainLoop(){
   if(gameState==="playing"){
     redrawPlayScreen();
-    // Show/hide roll button
     if(currentTurn===humanColor && !diceRolled){
       document.getElementById("rollDiceBtn").style.display= "inline-block";
     } else {
