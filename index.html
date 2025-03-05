@@ -202,36 +202,35 @@
 
   /* Define 20 boxes arranged as follows:
      Top row (indices 0–5), Middle row (indices 6–13), Bottom row (indices 14–19)
-
-     Note: We removed rosettes, but later overlay labels as specified.
-     (The main fix here is to ensure no repeated x/y coords.)
+     
+     We'll remove rosettes entirely and later overlay labels as specified.
   */
   const boardSquares = [
-    // Top row (y = 0) => 6 squares (#0..5)
-    { x: 50,  y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #0
-    { x: 100, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #1
-    { x: 150, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #2
-    { x: 200, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #3
-    { x: 250, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #4
-    { x: 300, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #5
+    // Top row (y = 0)
+    { x: 0,   y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #0
+    { x: 50,  y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #1
+    { x: 200, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #2
+    { x: 250, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #3
+    { x: 300, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #4
+    { x: 350, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #5
 
-    // Middle row (y = 50) => 8 squares (#6..13)
-    { x: 0,   y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #6
-    { x: 50,  y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #7
-    { x: 100, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #8
-    { x: 150, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #9
-    { x: 200, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #10
-    { x: 250, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #11
-    { x: 300, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #12
-    { x: 350, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #13
+    // Middle row (y = 50)
+    { x: 0,   y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #6
+    { x: 50,  y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #7
+    { x: 100, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #8
+    { x: 150, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #9
+    { x: 200, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #10
+    { x: 250, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #11
+    { x: 300, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #12
+    { x: 350, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #13
 
-    // Bottom row (y = 100) => 6 squares (#14..19)
-    { x: 50,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #14
-    { x: 100, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #15
-    { x: 150, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #16
-    { x: 200, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #17
-    { x: 250, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #18
-    { x: 300, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }  // #19
+    // Bottom row (y = 100)
+    { x: 0,   y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #14
+    { x: 50,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #15
+    { x: 200, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #16
+    { x: 250, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #17
+    { x: 300, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // Box #18
+    { x: 350, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }  // Box #19
   ];
 
   // The paths remain as in previous versions (for movement logic).
@@ -278,14 +277,12 @@
       return { x: boardMarginX + boardWidth + 80, y: boardMarginY + baseY + pieceIndex*30 };
     }
     if(pos === -1) {
-      // Off-board: White is above, Black below
       if(color === 'w') {
         return { x: boardMarginX + pieceIndex*(SQUARE_SIZE+5) + 20, y: boardMarginY - 60 };
       } else {
         return { x: boardMarginX + pieceIndex*(SQUARE_SIZE+5) + 20, y: boardMarginY + boardHeight + 60 };
       }
     }
-    // Fallback
     return { x: 0, y: 0 };
   }
   function getHighlightBox(color, pieceIndex, pos) {
@@ -327,19 +324,18 @@
       }
       pathIndex = idx;
     } else if(piecePos === 20) {
-      // Already finished
       return null;
     }
     let newIndex = pathIndex + diceValue;
     if(newIndex > path.length) return null;
-    if(newIndex === path.length) return 20; // Exactly finishing
+    if(newIndex === path.length) return 20;
     return path[newIndex];
   }
   function canLandOn(pos, color) {
     const own = (color === 'w') ? whitePieces : blackPieces;
     const opp = (color === 'w') ? blackPieces : whitePieces;
     if(pos < 20 && own.includes(pos)) return false;
-    // If rosettes were used, you'd check them here. (We removed them in this version.)
+    if(pos < 20 && opp.includes(pos) && boardSquares[pos].rosette) return false;
     return true;
   }
   function getMoveOptions(diceValue, color) {
@@ -364,7 +360,6 @@
       const opp = (color === 'w') ? blackPieces : whitePieces;
       let fromPos = own[pieceIndex];
       own[pieceIndex] = toPos;
-      // Capture if opponent is on that square
       if(toPos < 20) {
         let oppIdx = opp.indexOf(toPos);
         if(oppIdx !== -1) {
@@ -373,17 +368,16 @@
         }
       }
       lastMove = { fromPos, toPos, color, pieceIndex };
-      // If it were a rosette, extra turn. (Here just ignoring rosettes, or always false.)
-      extraTurn = false;
-
-      // Check for game over
+      if(toPos < 20 && boardSquares[toPos].rosette) {
+        extraTurn = true;
+      } else {
+        extraTurn = false;
+      }
       let finishedCount = own.filter(p => p === 20).length;
       if(finishedCount === NUM_PIECES) {
         gameState = "gameover";
         gameOverText.textContent = (color === humanColor) ? "You Win!" : "You Lose!";
       }
-
-      // Switch turn if no extra turn
       if(!extraTurn && gameState === "playing") {
         currentTurn = (currentTurn === 'w') ? 'b' : 'w';
       }
@@ -396,7 +390,6 @@
   function highlightLastMove() {
     if(!lastMove) return;
     let { fromPos, toPos, color, pieceIndex } = lastMove;
-    // fromPos highlight
     if(fromPos === -1 || fromPos === 20) {
       let box = getHighlightBox(color, pieceIndex, fromPos);
       ctx.fillStyle = "rgba(255,255,0,0.5)";
@@ -406,7 +399,6 @@
       ctx.fillStyle = "rgba(255,255,0,0.5)";
       ctx.fillRect(sq.x + boardMarginX, sq.y + boardMarginY, sq.w, sq.h);
     }
-    // toPos highlight
     if(toPos === -1 || toPos === 20) {
       let box = getHighlightBox(color, pieceIndex, toPos);
       ctx.fillStyle = "rgba(0,128,255,0.5)";
@@ -433,7 +425,7 @@
     ctx.lineWidth = 1.5;
     ctx.strokeRect(x, y, w, h);
   }
-  // Draw a star (unused rosette stub)
+  // Draw a star (used for rosettes if needed, but here we remove rosette drawings)
   function drawStar(cx, cy, spikes, outerRadius, innerRadius, fillColor, strokeColor, lineWidth) {
     let angle = Math.PI / spikes;
     ctx.beginPath();
@@ -456,41 +448,37 @@
   function drawBoard() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     highlightLastMove();
-    boardSquares.forEach((sq) => {
+    boardSquares.forEach((sq, i) => {
       let drawX = sq.x + boardMarginX, drawY = sq.y + boardMarginY;
       drawFancySquare(drawX, drawY, sq.w, sq.h);
     });
     drawLabels();
   }
-
-  // FIXED LABELING FUNCTION
+  // Draw labels on specified boxes
   function drawLabels() {
     ctx.fillStyle = "#8b4513";
     ctx.font = "bold 24px 'Papyrus', cursive, serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    
-    // Example: label box #0 => "14"
+    // Top row: Box #0 -> "14", Box #5 -> "4"
+    let pos0 = getPieceCoords(null, null, 0); // use boardSquare 0 center
     let box0 = boardSquares[0];
     ctx.fillText("14", box0.x + boardMarginX + box0.w/2, box0.y + boardMarginY + box0.h/2);
-
-    // Box #5 => "4"
-    let box5 = boardSquares[5];
-    ctx.fillText("4", box5.x + boardMarginX + box5.w/2, box5.y + boardMarginY + box5.h/2);
-
-    // Box #9 => "8"
-    let box9 = boardSquares[9];
-    ctx.fillText("8", box9.x + boardMarginX + box9.w/2, box9.y + boardMarginY + box9.h/2);
-
-    // Box #14 => "16"
-    let box14 = boardSquares[14];
-    ctx.fillText("16", box14.x + boardMarginX + box14.w/2, box14.y + boardMarginY + box14.h/2);
-
-    // Box #19 => "20"
-    let box19 = boardSquares[19];
-    ctx.fillText("20", box19.x + boardMarginX + box19.w/2, box19.y + boardMarginY + box19.h/2);
+    
+    let pos5 = boardSquares[5];
+    ctx.fillText("4", pos5.x + boardMarginX + pos5.w/2, pos5.y + boardMarginY + pos5.h/2);
+    
+    // Middle row: choose Box #9 (from indices 6-13) to label "8"
+    let pos9 = boardSquares[9]; // Box #9 is at index 9 in boardSquares (middle row)
+    ctx.fillText("8", pos9.x + boardMarginX + pos9.w/2, pos9.y + boardMarginY + pos9.h/2);
+    
+    // Bottom row: Box #14 -> "16", Box #19 -> "20"
+    let pos14 = boardSquares[14];
+    ctx.fillText("16", pos14.x + boardMarginX + pos14.w/2, pos14.y + boardMarginY + pos14.h/2);
+    
+    let pos19 = boardSquares[19];
+    ctx.fillText("20", pos19.x + boardMarginX + pos19.w/2, pos19.y + boardMarginY + pos19.h/2);
   }
-
   function drawPieces() {
     // White pieces
     whitePieces.forEach((pos, i) => {
@@ -534,7 +522,7 @@
     });
   }
   function drawUI() {
-    // Just a simple bottom bar placeholder
+    // Bottom bar left blank.
     ctx.fillStyle = "#f5f2e8";
     ctx.fillRect(0, canvasHeight-30, canvasWidth, 30);
     ctx.strokeStyle = "#000";
@@ -547,7 +535,7 @@
   }
 
   /***********************************
-   * 9) Interaction & Moves
+   * 8) Interaction & Moves
    ***********************************/
   function handleBoardClick(e) {
     if(gameState !== "playing") return;
@@ -583,7 +571,7 @@
   }
 
   /***********************************
-   * 10) Dice Rolling & AI
+   * 9) Dice Rolling & AI
    ***********************************/
   function showTemporaryMessage(msg) {
     diceMessageOverlay.textContent = msg;
@@ -605,7 +593,6 @@
     if(debugMode) console.log(`Human rolled: ${currentDiceRoll}`);
     let options = getMoveOptions(currentDiceRoll, currentTurn);
     if(options.length === 0) {
-      // No moves => pass turn
       if(debugMode) console.warn("No valid moves => pass turn to opponent.");
       diceRolled = false;
       currentDiceRoll = 0;
@@ -641,18 +628,16 @@
   }
 
   /***********************************
-   * 11) Main Loop
+   * 10) Main Loop
    ***********************************/
   function mainLoop() {
     if(gameState === "playing") {
       redrawPlayScreen();
-      // Show/hide the Roll Dice button for the human
       if(currentTurn === humanColor && !diceRolled) {
         document.getElementById("rollDiceBtn").style.display = "inline-block";
       } else {
         document.getElementById("rollDiceBtn").style.display = "none";
       }
-      // AI goes automatically if it's the AI's turn and dice not rolled
       if(currentTurn !== humanColor && !diceRolled && !aiThinking) {
         aiMove();
       }
@@ -661,7 +646,7 @@
   }
 
   /***********************************
-   * 12) Overlays & Navigation
+   * 11) Overlays & Navigation
    ***********************************/
   function hideAllScreens() {
     menuScreen.style.display = "none";
@@ -700,7 +685,7 @@
   }
 
   /***********************************
-   * 13) Buttons & Keyboard
+   * 12) Buttons & Keyboard
    ***********************************/
   document.getElementById("newGameBtn").onclick = () => showSideSelect();
   document.getElementById("instructionsBtn").onclick = () => showInstructions();
@@ -708,7 +693,7 @@
   document.getElementById("blackSideBtn").onclick = () => { humanColor = 'b'; startPlaying(); };
   document.getElementById("gameOverNewGameBtn").onclick = () => showSideSelect();
   document.getElementById("rollDiceBtn").addEventListener("click", humanRollDice);
-
+  
   // Custom dice
   document.getElementById("setCustomDiceBtn").addEventListener("click", () => {
     const val = parseInt(document.getElementById("customDiceInput").value, 10);
@@ -720,7 +705,7 @@
       redrawPlayScreen();
     }
   });
-
+  
   document.addEventListener("keydown", (e) => {
     const key = e.key.toLowerCase();
     if(gameState === "selectSide"){
@@ -740,9 +725,9 @@
       }
     }
   });
-
+  
   canvas.addEventListener("mousedown", handleBoardClick);
-
+  
   function startAll() {
     showMenu();
     requestAnimationFrame(mainLoop);
