@@ -21,7 +21,7 @@
     }
     #gameContainer {
       position: relative;
-      width: 680px; /* Increased container width to allow board margin */
+      width: 680px; /* Container width increased */
       max-width: 100%;
       padding: 20px; /* Extra surrounding space */
       box-sizing: border-box;
@@ -35,7 +35,7 @@
       background: #ddd;
       margin: auto;
     }
-    /* Controls placed below the board container */
+    /* Controls placed below the game container */
     #controls {
       margin-top: 10px;
       text-align: center;
@@ -115,7 +115,7 @@
     <p>
       The board is based on a 3×8 grid with gaps so that only 20 squares exist.
       Some squares are marked as <em>rosettes</em> (they get a fancy star design).
-      On your turn, roll four binary dice (0–4) and move one of your 7 pieces forward.
+      On your turn, roll four binary dice (yielding 0–4) and move one of your 7 pieces forward.
     </p>
     <p>
       Landing on a rosette grants an extra turn. You cannot capture an opponent on a rosette,
@@ -140,8 +140,8 @@
   </div>
 
   <!-- Canvas for the board -->
-  <!-- Canvas is set to 640×240 (8 columns × 80px, 3 rows × 80px) -->
-  <canvas id="gameCanvas" width="640" height="240"></canvas>
+  <!-- Canvas size increased to 680×280 so the full board and surrounding space are visible -->
+  <canvas id="gameCanvas" width="680" height="280"></canvas>
 </div>
 
 <!-- Controls below the game container -->
@@ -171,7 +171,7 @@
   const canvasHeight = canvas.height;
   const SQUARE_SIZE = 80;
   
-  // Add a board margin so the board isn’t flush against the canvas edge.
+  // Board margin: leave extra space around the board.
   const boardMarginX = 20;
   const boardMarginY = 20;
 
@@ -192,7 +192,7 @@
     { x: 480, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 4
     { x: 560, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index 5
 
-    // Row 1 (y = 80) – all 8 cells used; col4 is a rosette.
+    // Row 1 (y = 80) – all 8 cells used; cell at col4 is a rosette.
     { x: 0,   y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 6
     { x: 80,  y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 7
     { x: 160, y: 80,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index 8
@@ -223,7 +223,7 @@
   const debugMode = true;
 
   // Each player has 7 pieces.
-  // Piece positions: -1 = off-board, 0–19 = index in boardSquares, 20 = finished.
+  // Piece positions: -1 = off-board; 0–19 = index in boardSquares; 20 = finished.
   const NUM_PIECES = 7;
   let whitePieces = [];
   let blackPieces = [];
@@ -302,7 +302,7 @@
   }
 
   function drawPieces() {
-    // Draw white pieces with a radial gradient and drop shadow.
+    // Draw white pieces with a fancy radial gradient.
     whitePieces.forEach(pos => {
       if (pos < 0 || pos >= 20) return;
       let sq = boardSquares[pos];
@@ -351,7 +351,7 @@
     });
   }
 
-  // Draw UI info: turn, dice value, and counts of pieces off-board.
+  // Draw UI info: turn, dice value, and counts of off-board pieces.
   function drawUI() {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, canvasHeight - 30, canvasWidth, 30);
@@ -359,11 +359,10 @@
     ctx.font = "16px sans-serif";
     let txt = `Turn: ${currentTurn === "w" ? "White" : "Black"}. `;
     if (currentTurn === humanColor && !diceRolled) {
-      txt += "Click 'Roll Dice' or press [R].";
+      txt += "Click 'Roll Dice' or press [R]. ";
     } else if (diceRolled) {
       txt += `Dice: ${currentDiceRoll}. `;
     }
-    // Count off-board pieces (position -1)
     const whiteOff = whitePieces.filter(p => p === -1).length;
     const blackOff = blackPieces.filter(p => p === -1).length;
     txt += `White off-board: ${whiteOff} | Black off-board: ${blackOff}`;
@@ -518,6 +517,10 @@
       if (currentTurn !== humanColor && !diceRolled && !aiThinking) {
         aiMove();
       }
+      // Update piece count display.
+      const whiteOff = whitePieces.filter(p => p === -1).length;
+      const blackOff = blackPieces.filter(p => p === -1).length;
+      document.getElementById("pieceCountDisplay").textContent = `White off-board: ${whiteOff} | Black off-board: ${blackOff}`;
     }
     requestAnimationFrame(mainLoop);
   }
@@ -548,7 +551,7 @@
     hideAllScreens();
     gameState = "playing";
     initPieces();
-    currentTurn = "w"; // White always starts
+    currentTurn = "w"; // White always starts.
     diceRolled = false;
     currentDiceRoll = 0;
     extraTurn = false;
