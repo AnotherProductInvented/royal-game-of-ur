@@ -21,9 +21,9 @@
     }
     #gameContainer {
       position: relative;
-      width: 680px; /* Container width increased */
+      width: 1020px; /* Container width set to accommodate larger canvas plus padding */
       max-width: 100%;
-      padding: 20px; /* Extra surrounding space */
+      padding: 20px;
       box-sizing: border-box;
       background: #fff;
       margin-bottom: 20px;
@@ -35,7 +35,6 @@
       background: #ddd;
       margin: auto;
     }
-    /* Controls placed below the game container */
     #controls {
       margin-top: 10px;
       text-align: center;
@@ -140,8 +139,8 @@
   </div>
 
   <!-- Canvas for the board -->
-  <!-- Canvas size increased to 680×280 so the full board and surrounding space are visible -->
-  <canvas id="gameCanvas" width="680" height="280"></canvas>
+  <!-- Canvas is now 1000×600 -->
+  <canvas id="gameCanvas" width="1000" height="600"></canvas>
 </div>
 
 <!-- Controls below the game container -->
@@ -171,9 +170,12 @@
   const canvasHeight = canvas.height;
   const SQUARE_SIZE = 80;
   
-  // Board margin: leave extra space around the board.
-  const boardMarginX = 20;
-  const boardMarginY = 20;
+  // The board is 8 columns by 80px = 640px wide and 3 rows by 80px = 240px tall.
+  // Calculate margins to center the board within the canvas.
+  const boardWidth = 640;
+  const boardHeight = 240;
+  const boardMarginX = (canvasWidth - boardWidth) / 2;  // e.g., (1000 - 640) / 2 = 180px
+  const boardMarginY = (canvasHeight - boardHeight) / 2; // e.g., (600 - 240) / 2 = 180px
 
   /***** Board Layout *****
     We use a 3×8 grid with gaps so that only 20 squares exist.
@@ -262,11 +264,10 @@
   function drawBoard() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     boardSquares.forEach((sq, i) => {
-      // Ensure dimensions are valid.
       if (!isFinite(sq.w)) sq.w = SQUARE_SIZE;
       if (!isFinite(sq.h)) sq.h = SQUARE_SIZE;
       
-      // Apply board margin offsets.
+      // Compute draw position by centering the board.
       let drawX = sq.x + boardMarginX;
       let drawY = sq.y + boardMarginY;
       
@@ -282,7 +283,7 @@
       
       if (sq.rosette) {
         ctx.save();
-        ctx.translate(drawX + sq.w/2, drawY + sq.h/2);
+        ctx.translate(drawX + sq.w / 2, drawY + sq.h / 2);
         ctx.beginPath();
         ctx.arc(0, 0, 15, 0, Math.PI * 2);
         ctx.fillStyle = "red";
@@ -302,7 +303,6 @@
   }
 
   function drawPieces() {
-    // Draw white pieces with a fancy radial gradient.
     whitePieces.forEach(pos => {
       if (pos < 0 || pos >= 20) return;
       let sq = boardSquares[pos];
@@ -326,7 +326,6 @@
       ctx.restore();
     });
     
-    // Draw black pieces with a dark gradient.
     blackPieces.forEach(pos => {
       if (pos < 0 || pos >= 20) return;
       let sq = boardSquares[pos];
@@ -351,7 +350,6 @@
     });
   }
 
-  // Draw UI info: turn, dice value, and counts of off-board pieces.
   function drawUI() {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, canvasHeight - 30, canvasWidth, 30);
@@ -570,7 +568,7 @@
   document.getElementById("gameOverNewGameBtn").onclick = () => showSideSelect();
   document.getElementById("rollDiceBtn").addEventListener("click", humanRollDice);
   
-  // Custom Dice: For testing purposes.
+  // Custom Dice: For testing.
   document.getElementById("setCustomDiceBtn").addEventListener("click", () => {
     const customDice = parseInt(document.getElementById("customDiceInput").value, 10);
     if (!isNaN(customDice) && customDice >= 0 && customDice <= 4) {
