@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Another Product Invented: Royal Game of Ur</title>
-  <!-- Dummy favicon so no 404 -->
+  <!-- Dummy favicon so no 404 error -->
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <style>
     body {
@@ -12,10 +12,13 @@
       font-family: sans-serif;
       display: flex; flex-direction: column; align-items: center;
     }
-    h1 { margin: 1rem 0 0.5rem; text-align: center; }
+    h1 {
+      margin: 1rem 0 0.5rem;
+      text-align: center;
+    }
     #gameContainer {
       position: relative;
-      width: 1000px; /* container for the 1000×600 canvas */
+      width: 1020px;
       max-width: 100%;
       padding: 20px;
       box-sizing: border-box;
@@ -27,7 +30,7 @@
     canvas {
       display: block;
       background: #ddd;
-      margin: auto; /* center the canvas */
+      margin: auto;
     }
     #controls {
       margin-top: 10px;
@@ -72,7 +75,8 @@
       border: 8px solid rgba(255,255,255,0.3);
       border-top: 8px solid #fff;
       border-radius: 50%;
-      width: 60px; height: 60px;
+      width: 60px;
+      height: 60px;
       animation: spin 1s linear infinite;
       margin-bottom: 10px;
     }
@@ -103,9 +107,11 @@
   <div id="instructionsScreen" class="overlayScreen">
     <p><strong>How to Play</strong></p>
     <p>
-      On your turn, click “Roll Dice” or set a custom dice value, then click on one of your pieces to move it.
-      You cannot move unless you have rolled the dice.
-      Landing on a rosette grants an extra turn. You cannot capture an opponent on a rosette.
+      1) Roll dice or set a custom dice value.<br>
+      2) Click one of your pieces to move it.<br>
+      3) Landing on a rosette grants an extra turn.<br>
+      4) You cannot capture on a rosette.<br>
+      5) Need an exact roll to exit (square #20).
     </p>
     <p>Press [M] to return to the Main Menu.</p>
   </div>
@@ -125,11 +131,11 @@
     <p>Press [M] to return to the Main Menu.</p>
   </div>
 
-  <!-- The canvas is 1000×600 -->
+  <!-- Canvas for the board (1000×600) -->
   <canvas id="gameCanvas" width="1000" height="600"></canvas>
 </div>
 
-<!-- Controls below the board -->
+<!-- Controls -->
 <div id="controls">
   <button id="rollDiceBtn">Roll Dice</button>
   <label for="customDiceInput">Custom Dice:</label>
@@ -148,91 +154,105 @@
 <img id="logo" src="logo.png" alt="Logo">
 
 <script>
-  /****************************************
-   * 1) SETUP & BOARD LAYOUT
-   ****************************************/
+  /*************************************
+   * 1) GLOBALS & BOARD LAYOUT
+   *************************************/
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
   const canvasWidth = canvas.width;   // 1000
   const canvasHeight = canvas.height; // 600
-
-  // We'll use smaller squares (50×50).
   const SQUARE_SIZE = 50;
 
-  // The board is effectively 400 wide × 150 tall, but we have some squares shifted around.
-  // We'll center that bounding box in the 1000×600 canvas.
-  const boardWidth = 400;
-  const boardHeight = 150;
-  const boardMarginX = (canvasWidth - boardWidth) / 2; // e.g. (1000 - 400)/2 = 300
-  const boardMarginY = (canvasHeight - boardHeight) / 2; // e.g. (600 - 150)/2 = 225
+  // We'll define a 3×8 arrangement with some squares labeled "gap."
+  // Then we define the White path in the order your snippet suggests:
+  //  top row: squares labeled 13,14, gap, gap, then 1,2,3,4
+  //  middle row: 12..5
+  //  bottom row: 1,1, gap, gap, 1,1,1,1? (Your snippet had repeated "1"? We'll just treat them as squares.)
+  //  But we only have 20 squares total (0..19).
+  // We store them physically in an array with x,y coords, plus rosettes as needed.
 
-  /****************************************
-   * SHIFTING THE SECOND SQUARE IN ROW 0
-   * "two squares to the left" => 100px left
-   ****************************************
-   * Original row 0 (no shift) might be:
-   *   index0 => x=0, index1 => x=50, gap => index2 => x=200, etc.
-   * Now we SHIFT index1 by 100px left => x= (50 - 100) => -50
-   * so it’s "two squares to the left" of where it was.
-   * We'll keep everything else the same for row 0.
-   *
-   * That means row 0 squares are:
-   *   index0 => x=0
-   *   index1 => x=-50  (2 squares left from the old 50)
-   *   gap => next squares => index2 => x=200, etc.
-   * The rest remain unchanged.
-   ****************************************/
+  // We'll place them in a 3 row bounding box: 400 wide × 150 tall => center in 1000×600.
+  // boardMarginX, boardMarginY to center
+  const boardWidth = 400, boardHeight = 150;
+  const boardMarginX = (canvasWidth - boardWidth)/2; // e.g. (1000-400)/2=300
+  const boardMarginY = (canvasHeight - boardHeight)/2; // e.g. (600-150)/2=225
 
-  // We'll define row0 with that shift for index1.
-  // Then row1 is standard (all 8 columns).
-  // Then row2 is the same pattern as row0.
+  // We'll define squares 0..19 with your labeling approach:
+  //   Row0: col0 => "13", col1 => "14", col2=>gap, col3=>gap, col4=>"1", col5=>"2", col6=>"3", col7=>"4"
+  //   Row1: col0=>"12", col1=>"11", col2=>"10", col3=>"9", col4=>"8", col5=>"7", col6=>"6", col7=>"5"
+  //   Row2: col0=>"1", col1=>"1", col2=>gap, col3=>gap, col4=>"1", col5=>"1", col6=>"1", col7=>"1"
+  //
+  // But physically we only have 20 squares. We'll define them in an array with some labeled rosettes if needed.
+  // For simplicity, let's assume rosettes are on squares #4, #8, #13, #14, #19 (like a standard pattern).
+  // Adjust as needed.
+
   const boardSquares = [
-    // Row 0 (y=0)
-    { x: 0,    y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index0
-    { x: -50,  y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index1 (shifted left by 100 from original 50)
-    // gap => columns 2..3 => next squares => index2 => x=200, etc.
-    { x: 200,  y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index2
-    { x: 250,  y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index3
-    { x: 300,  y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index4
-    { x: 350,  y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // index5
+    // Row0 (y=0) => top row
+    // index0 => "13"
+    { x: 0,   y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #0 => "13"
+    // index1 => "14"
+    { x: 50,  y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #1 => "14"
+    // col2 => gap
+    // col3 => gap
+    // index2 => "1"
+    { x: 200, y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #2 => "1"
+    // index3 => "2"
+    { x: 250, y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #3 => "2"
+    // index4 => "3"
+    { x: 300, y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // #4 => "3" (rosette?)
+    // index5 => "4"
+    { x: 350, y: 0, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #5 => "4"
 
-    // Row 1 (y=50) => 8 columns from x=0..350
-    { x: 0,    y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // index6
-    { x: 50,   y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 7
-    { x: 100,  y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 8
-    { x: 150,  y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 9
-    { x: 200,  y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // 10
-    { x: 250,  y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 11
-    { x: 300,  y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 12
-    { x: 350,  y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 13
+    // Row1 (y=50) => middle row => 12..5
+    { x: 0,   y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #6 => "12"
+    { x: 50,  y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // #7 => "11" (rosette?)
+    { x: 100, y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #8 => "10"
+    { x: 150, y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #9 => "9"
+    { x: 200, y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // #10 => "8" (rosette?)
+    { x: 250, y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #11 => "7"
+    { x: 300, y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #12 => "6"
+    { x: 350, y: 50, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #13 => "5"
 
-    // Row 2 (y=100) => same pattern as row0
-    { x: 0,    y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 14
-    { x: -50,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }, // 15 (shift)
-    { x: 200,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 16
-    { x: 250,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 17
-    { x: 300,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // 18
-    { x: 350,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }  // 19
+    // Row2 (y=100) => bottom row => 1,1 gap gap 1,1,1,1
+    { x: 0,   y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #14 => "1"
+    { x: 50,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #15 => "1"
+    // col2 => gap
+    // col3 => gap
+    { x: 200, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #16 => "1"
+    { x: 250, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #17 => "1"
+    { x: 300, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false }, // #18 => "1"
+    { x: 350, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true  }  // #19 => "1" (rosette?)
   ];
 
+  // Next, define the White path in your snippet order:
+  //   top row => squares #0=>13, #1=>14, then #2=>1, #3=>2, #4=>3, #5=>4
+  //   middle row => #6=>12, #7=>11, #8=>10, #9=>9, #10=>8, #11=>7, #12=>6, #13=>5
+  //   bottom row => #14..#19 => all "1" squares
+  const whitePath = [0,1,2,3,4,5, 6,7,8,9,10,11,12,13, 14,15,16,17,18,19];
+
+  // For Black, do the same in reverse order:
+  //   We'll just define blackPath as reversed(whitePath).
+  const blackPath = [...whitePath].reverse();
+
   /****************************************
-   * GAME STATE & PIECE ARRAYS
+   * GAME STATE ARRAYS & PATHS
    ****************************************/
   let gameState = "menu";  // "menu", "instructions", "selectSide", "playing", "gameover"
-  let humanColor = null;   // "w" or "b"
-  let currentTurn = null;  // "w" or "b" (White always starts)
+  let humanColor = null;   // 'w' or 'b'
+  let currentTurn = null;  // 'w' or 'b'
   let currentDiceRoll = 0;
   let diceRolled = false;
   let extraTurn = false;
   let aiThinking = false;
   const debugMode = true;
 
+  // White & Black pieces: positions in [-1..20], where -1=off-board, 20=finished.
   const NUM_PIECES = 7;
   let whitePieces = [];
   let blackPieces = [];
 
-  // We store the last move made (by either side) so we can highlight it:
-  let lastMove = null; // { fromPos: number, toPos: number, color: 'w'|'b' }
+  // Store last move for highlight
+  let lastMove = null; // { fromPos, toPos, color }
 
   function initPieces() {
     whitePieces = Array(NUM_PIECES).fill(-1);
@@ -252,12 +272,12 @@
   }
   function checkForBugs() {
     function checkOverlap(pieces, color) {
-      const count = {};
-      pieces.forEach(pos => {
-        if (pos>=0 && pos<20) {
-          count[pos] = (count[pos]||0)+1;
-          if(count[pos]>1) {
-            console.error(`Overlap bug: ${color} has multiple pieces on #${pos}`);
+      const counts = {};
+      pieces.forEach(pos=>{
+        if(pos>=0 && pos<20){
+          counts[pos]=(counts[pos]||0)+1;
+          if(counts[pos]>1){
+            console.error(`Bug: Overlap => ${color} has multiple pieces on #${pos}`);
           }
         }
       });
@@ -267,29 +287,54 @@
   }
 
   /****************************************
+   * PATH HELPERS
+   ****************************************/
+  // getPath('w') => whitePath, getPath('b') => blackPath
+  function getPath(color) {
+    return (color==='w')? whitePath : blackPath;
+  }
+
+  /****************************************
    * DRAWING
    ****************************************/
+  function highlightLastMove(){
+    if(!lastMove) return;
+    const { fromPos, toPos, color } = lastMove;
+    // We have fromPos and toPos as path indices, not direct boardSquares indices if we’re using a path.
+    // Actually, in this snippet we’ll store fromPos as a direct boardSquares index. So we can highlight that square.
+    if(fromPos>=0 && fromPos<20){
+      let sq=boardSquares[fromPos];
+      let x=sq.x+boardMarginX, y=sq.y+boardMarginY;
+      ctx.fillStyle="rgba(255,255,0,0.5)"; // yellow
+      ctx.fillRect(x,y, sq.w,sq.h);
+    }
+    if(toPos>=0 && toPos<20){
+      let sq=boardSquares[toPos];
+      let x=sq.x+boardMarginX, y=sq.y+boardMarginY;
+      ctx.fillStyle="rgba(0,128,255,0.5)"; // blue
+      ctx.fillRect(x,y, sq.w,sq.h);
+    }
+  }
+
   function drawBoard() {
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
-    // highlight last move squares first (so squares can paint over them).
+    // highlight last move squares first
     highlightLastMove();
 
+    // Draw squares
     boardSquares.forEach((sq,i)=>{
       if(!isFinite(sq.w)) sq.w=SQUARE_SIZE;
       if(!isFinite(sq.h)) sq.h=SQUARE_SIZE;
-
-      let drawX = sq.x + boardMarginX;
-      let drawY = sq.y + boardMarginY;
-
-      // tile gradient
+      let drawX = sq.x+boardMarginX;
+      let drawY = sq.y+boardMarginY;
       let grad = ctx.createLinearGradient(drawX,drawY, drawX+sq.w, drawY+sq.h);
       grad.addColorStop(0,"#e6c87d");
       grad.addColorStop(1,"#4e6fa3");
       ctx.fillStyle=grad;
-      ctx.fillRect(drawX,drawY, sq.w,sq.h);
+      ctx.fillRect(drawX,drawY,sq.w,sq.h);
       ctx.strokeStyle="#000";
       ctx.lineWidth=2;
-      ctx.strokeRect(drawX,drawY, sq.w,sq.h);
+      ctx.strokeRect(drawX,drawY,sq.w,sq.h);
 
       if(sq.rosette){
         ctx.save();
@@ -310,26 +355,6 @@
         ctx.restore();
       }
     });
-  }
-
-  // highlightLastMove() colors the “from” square in yellow and “to” square in blue.
-  function highlightLastMove(){
-    if(!lastMove) return;
-    let { fromPos, toPos, color } = lastMove;
-    // from
-    if(fromPos>=0 && fromPos<20){
-      let sq=boardSquares[fromPos];
-      let x=sq.x+boardMarginX, y=sq.y+boardMarginY;
-      ctx.fillStyle="rgba(255,255,0,0.5)"; // yellow
-      ctx.fillRect(x,y, sq.w,sq.h);
-    }
-    // to
-    if(toPos>=0 && toPos<20){
-      let sq=boardSquares[toPos];
-      let x=sq.x+boardMarginX, y=sq.y+boardMarginY;
-      ctx.fillStyle="rgba(0,128,255,0.5)"; // blue
-      ctx.fillRect(x,y, sq.w,sq.h);
-    }
   }
 
   function drawPieces(){
@@ -399,152 +424,174 @@
   /****************************************
    * GAME LOGIC
    ****************************************/
-  function getValidMove(piecePos, diceValue, ownPieces, oppPieces){
+  function getValidMove(piecePos, diceValue, color) {
     if(diceValue===0) return null;
-    let newPos = (piecePos===-1)?0: piecePos + diceValue;
-    if(newPos>20) return null; // overshoot
-    // can't land on friendly piece
-    if(newPos<20 && ownPieces.includes(newPos)) return null;
+    const path = getPath(color);
+    // piecePos is the index in boardSquares
+    // find where that index is in the path
+    let pathIndex = path.indexOf(piecePos);
+    if(pathIndex===-1){
+      if(debugMode) console.warn(`Bug: piecePos ${piecePos} not found in path for color=${color}`);
+      return null;
+    }
+    let newIndex = pathIndex + diceValue;
+    if(newIndex>path.length) return null; // overshoot
+    // if exactly path.length => piece finishes
+    if(newIndex===path.length) return 20; // finished
+    // else newIndex < path.length => new boardSquares index
+    return path[newIndex];
+  }
+
+  function canLandOn(pos, color) {
+    // check if can't land on friendly piece
+    const own = (color==='w')? whitePieces : blackPieces;
+    const opp = (color==='w')? blackPieces : whitePieces;
+    if(pos<20 && own.includes(pos)) return false; // can't land
     // can't capture on rosette
-    if(newPos<20 && oppPieces.includes(newPos)){
-      if(boardSquares[newPos].rosette) return null;
+    if(pos<20 && opp.includes(pos) && boardSquares[pos].rosette){
+      return false;
     }
-    return newPos;
-  }
-  function getMoveOptions(diceValue){
-    let opts=[];
-    if(currentTurn==="w"){
-      whitePieces.forEach((pos,i)=>{
-        let t=getValidMove(pos,diceValue,whitePieces,blackPieces);
-        if(t!==null) opts.push({ pieceIndex:i, newPos:t });
-      });
-    } else {
-      blackPieces.forEach((pos,i)=>{
-        let t=getValidMove(pos,diceValue,blackPieces,whitePieces);
-        if(t!==null) opts.push({ pieceIndex:i, newPos:t });
-      });
-    }
-    return opts;
+    return true;
   }
 
-  function executeMove(pieceIndex, targetPos){
-    try{
-      let own=(currentTurn==="w")? whitePieces: blackPieces;
-      let opp=(currentTurn==="w")? blackPieces: whitePieces;
+  function getMoveOptions(diceValue, color) {
+    let result = [];
+    const own = (color==='w')? whitePieces : blackPieces;
+    own.forEach((sqIndex, i)=>{
+      if(sqIndex===20) return; // piece is finished
+      let target = getValidMove(sqIndex, diceValue, color);
+      if(target!==null) {
+        // check if we can land
+        if(target<21 && canLandOn(target,color)){
+          result.push({ pieceIndex:i, fromPos: sqIndex, toPos: target });
+        }
+      }
+    });
+    return result;
+  }
 
-      let fromPos= own[pieceIndex];
-      own[pieceIndex]=targetPos;
+  function executeMove(pieceIndex, toPos, color) {
+    try {
+      const own = (color==='w')? whitePieces : blackPieces;
+      const opp = (color==='w')? blackPieces : whitePieces;
+      let fromPos = own[pieceIndex];
+      own[pieceIndex] = toPos;
 
       // capture
-      if(targetPos<20){
-        let oppIdx=opp.indexOf(targetPos);
+      if(toPos<20){
+        let oppIdx = opp.indexOf(toPos);
         if(oppIdx!==-1){
-          opp[oppIdx]=-1;
-          if(debugMode) console.log(`Capture: ${currentTurn==="w"?"White":"Black"} captured an opponent on #${targetPos}`);
+          opp[oppIdx] = -1; // captured => off-board
+          if(debugMode) console.log(`${color==='w'?"White":"Black"} captured opponent on #${toPos}`);
         }
       }
       if(debugMode) checkForBugs();
 
-      // store last move for highlighting
-      lastMove = {
-        fromPos: fromPos,
-        toPos: targetPos,
-        color: currentTurn
-      };
+      // highlight
+      lastMove = { fromPos, toPos, color };
 
       // rosette => extra turn
-      if(targetPos<20 && boardSquares[targetPos].rosette){
+      if(toPos<20 && boardSquares[toPos].rosette){
         extraTurn=true;
       } else {
         extraTurn=false;
       }
-      // check for win
-      let finishedCount= own.filter(p=>p===20).length;
+      // check if finished all
+      let finishedCount = own.filter(p=>p===20).length;
       if(finishedCount===NUM_PIECES){
         gameState="gameover";
-        document.getElementById("gameOverText").textContent=(currentTurn===humanColor)?"You Win!":"You Lose!";
+        document.getElementById("gameOverText").textContent=(color===humanColor)?"You Win!":"You Lose!";
       }
       // switch turn if no extra
       if(!extraTurn && gameState==="playing"){
-        currentTurn=(currentTurn==="w")?"b":"w";
+        currentTurn=(currentTurn==='w')?'b':'w';
       }
       diceRolled=false;
       currentDiceRoll=0;
-    } catch(err){
+    } catch(err) {
       console.error("Error in executeMove:", err);
     }
   }
 
-  // Called when user clicks on the board
-  function handleBoardClick(e){
+  function handleBoardClick(e) {
     if(gameState!=="playing") return;
     if(currentTurn!==humanColor) return; // must be player's turn
-    if(!diceRolled) return; // must have rolled dice first
+    if(!diceRolled) {
+      if(debugMode) console.warn("Bug: You must roll dice before moving.");
+      return;
+    }
 
+    const own = (currentTurn==='w')? whitePieces : blackPieces;
     let rect=canvas.getBoundingClientRect();
     let mx=e.clientX-rect.left, my=e.clientY-rect.top;
 
-    let own=(currentTurn==="w")? whitePieces: blackPieces;
-    let moves=getMoveOptions(currentDiceRoll);
+    // get possible moves
+    let moves = getMoveOptions(currentDiceRoll, currentTurn);
+    if(moves.length===0 && debugMode){
+      console.warn("No valid moves for you right now. Passing turn!");
+    }
 
-    for(let i=0;i<own.length;i++){
+    for(let i=0; i<own.length; i++){
       let pos=own[i];
-      if(pos<0||pos>=20) continue;
+      if(pos<0||pos>=20) continue; // off-board or finished
+      // check if user clicked on this piece
       let sq=boardSquares[pos];
       let cx=sq.x+boardMarginX+sq.w/2;
       let cy=sq.y+boardMarginY+sq.h/2;
       let dx=mx-cx, dy=my-cy;
-      // piece radius ~18
       if(Math.sqrt(dx*dx + dy*dy)<=18){
-        // check if valid move for this piece
-        let found=moves.find(m=>m.pieceIndex===i);
-        if(found){
-          executeMove(i,found.newPos);
-          redrawPlayScreen();
+        // see if there's a move for it
+        let found = moves.find(m=>m.pieceIndex===i);
+        if(!found){
+          if(debugMode) console.warn(`Piece #${i} has no valid move with dice=${currentDiceRoll}`);
+          return;
         }
+        // do the move
+        executeMove(i, found.toPos, currentTurn);
+        redrawPlayScreen();
         return;
       }
     }
   }
 
-  // Called when user clicks "Roll Dice"
   function humanRollDice(){
     if(gameState!=="playing") return;
     if(currentTurn!==humanColor) return;
-    if(diceRolled) return;
-
+    if(diceRolled) {
+      if(debugMode) console.warn("Bug: Already rolled dice, can't roll again now.");
+      return;
+    }
     currentDiceRoll=rollDice();
     diceRolled=true;
     if(debugMode) console.log(`Human rolled: ${currentDiceRoll}`);
-    let options=getMoveOptions(currentDiceRoll);
-    if(options.length===0){
-      // no valid move => pass turn
+    let moves = getMoveOptions(currentDiceRoll, currentTurn);
+    if(moves.length===0){
+      if(debugMode) console.warn("No valid moves => pass turn to opponent.");
       diceRolled=false;
       currentDiceRoll=0;
-      currentTurn=(currentTurn==="w")?"b":"w";
+      currentTurn=(currentTurn==='w')?'b':'w';
     }
     redrawPlayScreen();
   }
 
-  // Called when AI moves
-  function aiMove(){
+  function aiMove() {
     if(gameState!=="playing") return;
     if(currentTurn===humanColor) return;
     aiThinking=true;
     document.getElementById("loadingOverlay").style.display="flex";
-
     setTimeout(()=>{
       currentDiceRoll=rollDice();
       diceRolled=true;
-      if(debugMode) console.log(`AI (${currentTurn==="w"?"White":"Black"}) rolled: ${currentDiceRoll}`);
-      let options=getMoveOptions(currentDiceRoll);
-      if(options.length>0){
-        let pick=options[Math.floor(Math.random()*options.length)];
-        executeMove(pick.pieceIndex,pick.newPos);
+      if(debugMode) console.log(`AI (${currentTurn==='w'?'White':'Black'}) rolled: ${currentDiceRoll}`);
+      let moves = getMoveOptions(currentDiceRoll, currentTurn);
+      if(moves.length>0){
+        let pick = moves[Math.floor(Math.random()*moves.length)];
+        executeMove(pick.pieceIndex, pick.toPos, currentTurn);
       } else {
+        if(debugMode) console.warn("AI has no valid moves => pass turn.");
         diceRolled=false;
         currentDiceRoll=0;
-        currentTurn=(currentTurn==="w")?"b":"w";
+        currentTurn=(currentTurn==='w')?'b':'w';
       }
       aiThinking=false;
       document.getElementById("loadingOverlay").style.display="none";
@@ -552,30 +599,30 @@
     },1500);
   }
 
-  // mainLoop runs every frame
   function mainLoop(){
     if(gameState==="playing"){
       redrawPlayScreen();
-      // show/hide the roll button
+      // show/hide roll dice
       if(currentTurn===humanColor && !diceRolled){
         document.getElementById("rollDiceBtn").style.display="inline-block";
       } else {
         document.getElementById("rollDiceBtn").style.display="none";
       }
-      // AI
+      // AI turn if needed
       if(currentTurn!==humanColor && !diceRolled && !aiThinking){
         aiMove();
       }
       // piece count
       const whiteOff=whitePieces.filter(p=>p===-1).length;
       const blackOff=blackPieces.filter(p=>p===-1).length;
-      document.getElementById("pieceCountDisplay").textContent=`White off-board: ${whiteOff} | Black off-board: ${blackOff}`;
+      document.getElementById("pieceCountDisplay").textContent=
+        `White off-board: ${whiteOff} | Black off-board: ${blackOff}`;
     }
     requestAnimationFrame(mainLoop);
   }
 
   /****************************************
-   * OVERLAYS & NAV
+   * OVERLAY & MENU
    ****************************************/
   function hideAllScreens(){
     document.getElementById("menuScreen").style.display="none";
@@ -597,7 +644,8 @@
   }
   function startPlaying(){
     hideAllScreens(); gameState="playing";
-    initPieces(); currentTurn="w";
+    initPieces();
+    currentTurn="w"; // White starts
     diceRolled=false; currentDiceRoll=0; extraTurn=false;
   }
   function showGameOver(){
@@ -605,17 +653,23 @@
     document.getElementById("gameOverScreen").style.display="flex";
   }
 
-  // Buttons & keys
+  // Buttons
   document.getElementById("newGameBtn").onclick=()=>showSideSelect();
   document.getElementById("instructionsBtn").onclick=()=>showInstructions();
-  document.getElementById("whiteSideBtn").onclick=()=>{ humanColor="w"; startPlaying(); };
-  document.getElementById("blackSideBtn").onclick=()=>{ humanColor="b"; startPlaying(); };
+  document.getElementById("whiteSideBtn").onclick=()=>{
+    humanColor='w';
+    startPlaying();
+  };
+  document.getElementById("blackSideBtn").onclick=()=>{
+    humanColor='b';
+    startPlaying();
+  };
   document.getElementById("gameOverNewGameBtn").onclick=()=>showSideSelect();
   document.getElementById("rollDiceBtn").addEventListener("click", humanRollDice);
 
-  // Custom dice (for testing)
+  // Custom dice
   document.getElementById("setCustomDiceBtn").addEventListener("click",()=>{
-    const val=parseInt(document.getElementById("customDiceInput").value,10);
+    const val = parseInt(document.getElementById("customDiceInput").value,10);
     if(!isNaN(val) && val>=0 && val<=4){
       currentDiceRoll=val;
       diceRolled=true;
@@ -624,6 +678,7 @@
     }
   });
 
+  // Keyboard shortcuts
   document.addEventListener("keydown",(e)=>{
     const key=e.key.toLowerCase();
     if(gameState==="selectSide"){
@@ -633,11 +688,13 @@
       if(key==="r" && currentTurn===humanColor && !diceRolled){
         humanRollDice();
       } else if(key==="m"){
-        initPieces(); showMenu();
+        initPieces();
+        showMenu();
       }
     } else if(["instructions","gameover"].includes(gameState)){
       if(key==="m"){
-        initPieces(); showMenu();
+        initPieces();
+        showMenu();
       }
     }
   });
