@@ -375,10 +375,12 @@ function executeMove(pieceIndex, toPos, color) {
       extraTurn= false;
     }
     let finishedCount= own.filter(p=> p===20).length;
-    if(finishedCount===NUM_PIECES){
-      gameState="gameover";
-      gameOverText.textContent= (color===humanColor)? "You Win!": "You Lose!";
+    if(finishedCount === NUM_PIECES) {
+      gameOverText.textContent = (color === humanColor) ? "You Win!" : "You Lose!";
+      showGameOver();
+      return;
     }
+
     if(!extraTurn && gameState==="playing"){
       currentTurn= (currentTurn==='w')? 'b':'w';
     }
@@ -521,9 +523,13 @@ function handleBoardClick(e){
     return;
   }
   let moves= getMoveOptions(currentDiceRoll, currentTurn);
-  if(moves.length===0 && debugMode){
-    console.warn("No valid moves => pass turn!");
-  }
+  if (moves.length === 0) {
+  console.warn("No valid moves => pass turn!");
+  showTemporaryMessage("No valid moves. Passing turn...");
+  diceRolled = false;
+  currentDiceRoll = 0;
+  currentTurn = (currentTurn === 'w') ? 'b' : 'w';
+}
   let rect= canvas.getBoundingClientRect();
   let mx= e.clientX- rect.left, my= e.clientY- rect.top;
   const own= (currentTurn==='w')? whitePieces: blackPieces;
@@ -570,12 +576,14 @@ function humanRollDice(){
   showTemporaryMessage(`${(currentTurn==='w'?'White':'Black')} rolled ${currentDiceRoll}`);
   if(debugMode) console.log(`Human rolled: ${currentDiceRoll}`);
   let options= getMoveOptions(currentDiceRoll, currentTurn);
-  if(options.length===0){
-    if(debugMode) console.warn("No valid moves => pass turn to opponent.");
-    diceRolled= false;
-    currentDiceRoll= 0;
-    currentTurn= (currentTurn==='w')?'b':'w';
-  }
+  if(options.length === 0){
+  if(debugMode) console.warn("No valid moves => pass turn to opponent.");
+  showTemporaryMessage("No moves. Passing turn...");      // <-- ADD THIS LINE
+  diceRolled = false;
+  currentDiceRoll = 0;
+  currentTurn = (currentTurn === 'w') ? 'b' : 'w';
+}
+
   redrawPlayScreen();
 }
 function aiMove(){
@@ -594,12 +602,13 @@ function aiMove(){
       executeMove(pick.pieceIndex, pick.toPos, currentTurn);
       redrawPlayScreen();
       if(extraTurn) showTemporaryMessage(`${(currentTurn==='w'?'White':'Black')} goes again!`);
-    } else {
-      if(debugMode) console.warn("AI has no valid moves => pass turn!");
-      diceRolled= false;
-      currentDiceRoll= 0;
-      currentTurn= (currentTurn==='w')?'b':'w';
-    }
+} else {
+  if(debugMode) console.warn("AI has no valid moves => pass turn!");
+  showTemporaryMessage("AI has no moves. Passing turn...");  // <-- ADD THIS LINE
+  diceRolled = false;
+  currentDiceRoll = 0;
+  currentTurn = (currentTurn === 'w') ? 'b' : 'w';
+}
     aiThinking= false;
     loadingOverlay.style.display= "none";
   },1500);
