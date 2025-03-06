@@ -218,8 +218,8 @@ let currentTurn = null;    // 'w' or 'b'
 let currentDiceRoll = 0;
 let diceRolled = false;
 let aiThinking = false;
-let extraTurn = false;     // Flag for rosette extra turn
-let nextPlayer = null;     // Who will play next
+let extraTurn = false;     // extraTurn flag for rosette
+let nextPlayer = null;     // stores who gets next turn
 const debugMode = true;
 const NUM_PIECES = 7;
 let whitePieces = [], blackPieces = [];
@@ -349,10 +349,10 @@ function executeMove(pieceIndex, toPos, color) {
   }
   lastMove = { fromPos, toPos, color, pieceIndex };
 
-  // For a rosette, end the turn immediately but assign the same color for next turn.
+  // For a rosette, end the turn immediately but assign same color to next turn.
   if(toPos < 20 && boardSquares[toPos].rosette) {
     extraTurn = true;
-    nextPlayer = color; // Keep same color
+    nextPlayer = color;
   } else {
     extraTurn = false;
     nextPlayer = (color === 'w') ? 'b' : 'w';
@@ -545,7 +545,7 @@ function endTurn() {
     currentTurn = nextPlayer;
     showTemporaryMessage(`${(currentTurn==='w'?'White':'Black')} Turn! Roll dice...`);
     redrawPlayScreen();
-  }, 2000); // Delay set to 2000ms
+  }, 2000); // Changed from 1000ms to 2000ms
 }
 
 /***********************************
@@ -554,10 +554,9 @@ function endTurn() {
 function showTemporaryMessage(msg) {
   diceMessageOverlay.textContent = msg;
   diceMessageOverlay.style.display = "block";
-  // Changed timeout from 3000ms to 6000ms (twice as long)
   setTimeout(() => {
     diceMessageOverlay.style.display = "none";
-  }, 6000);
+  }, 6000); // Changed from 3000ms to 6000ms
 }
 function humanRollDice() {
   if(gameState !== "playing") return;
@@ -585,7 +584,6 @@ function aiMove() {
   if(currentTurn === humanColor) return;
   aiThinking = true;
   loadingOverlay.style.display = "flex";
-  // Increase delay to slow AI moves (changed from 1500ms to 3000ms)
   setTimeout(() => {
     currentDiceRoll = rollDice();
     diceRolled = true;
@@ -596,9 +594,10 @@ function aiMove() {
       const pick = options[Math.floor(Math.random() * options.length)];
       executeMove(pick.pieceIndex, pick.toPos, currentTurn);
       redrawPlayScreen();
+      // If extra turn, show message and delay endTurn so message is visible.
       if(extraTurn){
         showTemporaryMessage(`${(currentTurn==='w'?'White':'Black')} goes again!`);
-        setTimeout(() => { endTurn(); }, 2000);
+        setTimeout(() => { endTurn(); }, 2000); // Delay increased to 2000ms
       } else {
         endTurn();
       }
@@ -611,7 +610,7 @@ function aiMove() {
     }
     aiThinking = false;
     loadingOverlay.style.display = "none";
-  }, 3000); // Delay set to 3000ms
+  }, 1500);
 }
 
 /***********************************
