@@ -20,7 +20,7 @@
       text-align: center;
       font-family: "Papyrus", cursive, serif;
     }
-    /* Game container style */
+    /* Game container */
     #gameContainer {
       position: relative;
       width: 1020px;
@@ -37,7 +37,7 @@
       background: #f5f2e8;
       margin: auto;
     }
-    /* Overlay screens (menus/instructions) */
+    /* Overlay screens */
     .overlayScreen {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -61,7 +61,7 @@
       cursor: pointer;
       font-family: "Papyrus", cursive, serif;
     }
-    /* Controls below the container */
+    /* Controls */
     #controls {
       margin-top: 10px;
       text-align: center;
@@ -176,7 +176,9 @@
 <img id="logo" src="logo.png" alt="Logo">
 
 <script>
-/* 1) Canvas & Board Setup */
+/***********************************
+ * 1) Canvas & Board Setup
+ ***********************************/
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const canvasWidth = canvas.width;
@@ -187,7 +189,7 @@ const boardWidth = 400, boardHeight = 150;
 const boardMarginX = (canvasWidth - boardWidth) / 2;
 const boardMarginY = (canvasHeight - boardHeight) / 2;
 
-/* Board squares with rosettes at positions #1, #5, #10, #15, #19 */
+/* Board squares with rosettes at positions 1,5,10,15,19 */
 const boardSquares = [
   { x: 0,   y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
   { x: 50,  y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true },
@@ -213,25 +215,29 @@ const boardSquares = [
   { x: 350, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true }
 ];
 
-/* Paths for white and black pieces */
-const whitePath = [2, 3, 4, 5, 13, 12, 11, 10, 9, 8, 7, 6, 0, 1];
-const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
+/* Paths for pieces */
+const whitePath = [2,3,4,5,13,12,11,10,9,8,7,6,0,1];
+const blackPath = [16,17,18,19,13,12,11,10,9,8,7,6,14,15];
 
-/* 2) Game State Variables */
+/***********************************
+ * 2) Game State Variables
+ ***********************************/
 let gameState = "menu";
-let humanColor = null;     // 'w' or 'b'
-let currentTurn = null;    // 'w' or 'b'
+let humanColor = null;   // 'w' or 'b'
+let currentTurn = null;  // will be set to the chosen side
 let currentDiceRoll = 0;
 let diceRolled = false;
 let aiThinking = false;
-let extraTurn = false;     // Flag for rosette extra turn
-let nextPlayer = null;     // Which color goes next
+let extraTurn = false;
+let nextPlayer = null;
 const debugMode = true;
 const NUM_PIECES = 7;
 let whitePieces = [], blackPieces = [];
 let lastMove = null;
 
-/* 3) Overlays */
+/***********************************
+ * 3) Overlays
+ ***********************************/
 const menuScreen = document.getElementById("menuScreen");
 const instructionsScreen = document.getElementById("instructionsScreen");
 const sideScreen = document.getElementById("sideScreen");
@@ -240,7 +246,9 @@ const gameOverText = document.getElementById("gameOverText");
 const loadingOverlay = document.getElementById("loadingOverlay");
 const diceMessageOverlay = document.getElementById("diceMessageOverlay");
 
-/* 4) Off-board & On-board Coordinates */
+/***********************************
+ * 4) Off-board & On-board Coordinates
+ ***********************************/
 function getPieceCoords(color, pieceIndex, pos) {
   if (pos >= 0 && pos < 20) {
     const sq = boardSquares[pos];
@@ -265,7 +273,9 @@ function getHighlightBox(color, pieceIndex, pos) {
   return { x: c.x - 20, y: c.y - 20, w: 40, h: 40 };
 }
 
-/* 5) Initialization & Utility */
+/***********************************
+ * 5) Initialization & Utility
+ ***********************************/
 function initPieces() {
   whitePieces = Array(NUM_PIECES).fill(-1);
   blackPieces = Array(NUM_PIECES).fill(-1);
@@ -280,7 +290,9 @@ function rollDice() {
   return total;
 }
 
-/* 6) Path Logic */
+/***********************************
+ * 6) Path Logic
+ ***********************************/
 function getPath(color) {
   return (color === 'w') ? whitePath : blackPath;
 }
@@ -333,14 +345,16 @@ function canCaptureMove(pos, color) {
   return opp.includes(pos);
 }
 
-/* 7) Move Execution & Highlight */
+/***********************************
+ * 7) Move Execution & Highlight
+ ***********************************/
 function executeMove(pieceIndex, toPos, color) {
   const own = (color === 'w') ? whitePieces : blackPieces;
   const opp = (color === 'w') ? blackPieces : whitePieces;
   const fromPos = own[pieceIndex];
   own[pieceIndex] = toPos;
 
-  // Capture if not on rosette.
+  // Capture if not on a rosette.
   if (toPos < 20) {
     const oppIdx = opp.indexOf(toPos);
     if (oppIdx !== -1) {
@@ -350,7 +364,7 @@ function executeMove(pieceIndex, toPos, color) {
   }
   lastMove = { fromPos, toPos, color, pieceIndex };
 
-  // If landed on a rosette, end the turn and give the same color another turn.
+  // If landing on a rosette, end turn and let same side play.
   if (toPos < 20 && boardSquares[toPos].rosette) {
     extraTurn = true;
     nextPlayer = color;
@@ -370,7 +384,7 @@ function executeMove(pieceIndex, toPos, color) {
 function highlightLastMove() {
   if (!lastMove) return;
   const { fromPos, toPos, color, pieceIndex } = lastMove;
-  // Highlight starting square.
+  // Highlight starting square:
   if (fromPos >= 0 && fromPos < 20) {
     const sq = boardSquares[fromPos];
     ctx.fillStyle = "rgba(255,255,0,0.5)";
@@ -380,7 +394,7 @@ function highlightLastMove() {
     ctx.fillStyle = "rgba(255,255,0,0.5)";
     ctx.fillRect(box.x, box.y, box.w, box.h);
   }
-  // Highlight ending square.
+  // Highlight ending square:
   if (toPos >= 0 && toPos < 20) {
     const sq2 = boardSquares[toPos];
     ctx.fillStyle = "rgba(0,128,255,0.5)";
@@ -392,7 +406,9 @@ function highlightLastMove() {
   }
 }
 
-/* 8) Drawing */
+/***********************************
+ * 8) Drawing
+ ***********************************/
 function drawFancySquare(x, y, w, h) {
   const cx = x + w / 2, cy = y + h / 2;
   const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 45);
@@ -500,10 +516,12 @@ function redrawPlayScreen() {
   drawUI();
 }
 
-/* 9) Interaction & Moves */
+/***********************************
+ * 9) Interaction & Moves
+ ***********************************/
 function handleBoardClick(e) {
   if (gameState !== "playing") return;
-  if (currentTurn !== humanColor) return;
+  // Removed check for currentTurn === humanColor to allow manual play for both sides.
   if (!diceRolled) {
     if (debugMode) console.warn("Must roll dice before moving!");
     return;
@@ -537,19 +555,23 @@ function handleBoardClick(e) {
   }
 }
 
-/* 10) Turn End / Next Turn */
+/***********************************
+ * 10) Turn End / Next Turn
+ ***********************************/
 function endTurn() {
   diceRolled = false;
   currentDiceRoll = 0;
-  // Delay before starting next turn so the message is visible.
+  // Delay before starting next turn so the message can be read.
   setTimeout(() => {
     currentTurn = nextPlayer;
     showTemporaryMessage(`${(currentTurn === 'w' ? 'White' : 'Black')} Turn! Roll dice...`);
     redrawPlayScreen();
-  }, 2000); // 2000ms delay
+  }, 2000);
 }
 
-/* 11) Dice Rolling */
+/***********************************
+ * 11) Dice Rolling
+ ***********************************/
 function showTemporaryMessage(msg) {
   diceMessageOverlay.textContent = msg;
   diceMessageOverlay.style.display = "block";
@@ -561,7 +583,7 @@ function showTemporaryMessage(msg) {
 
 function humanRollDice() {
   if (gameState !== "playing") return;
-  if (currentTurn !== humanColor) return;
+  // Remove human turn check so both sides are controlled manually.
   if (diceRolled) {
     if (debugMode) console.warn("Already rolled dice this turn!");
     return;
@@ -576,62 +598,31 @@ function humanRollDice() {
     showTemporaryMessage("No moves. Passing turn...");
     diceRolled = false;
     currentDiceRoll = 0;
+    // Switch turn manually
     currentTurn = (currentTurn === 'w') ? 'b' : 'w';
     return;
   }
 }
 
 function aiMove() {
-  if (gameState !== "playing") return;
-  if (currentTurn === humanColor) return;
-  aiThinking = true;
-  loadingOverlay.style.display = "flex";
-  // Delay increased to 3000ms for AI moves.
-  setTimeout(() => {
-    currentDiceRoll = rollDice();
-    diceRolled = true;
-    showTemporaryMessage(`${(currentTurn === 'w' ? 'White' : 'Black')} rolled ${currentDiceRoll}`);
-    if (debugMode) console.log(`AI (${currentTurn === 'w' ? 'White' : 'Black'}) rolled: ${currentDiceRoll}`);
-    const options = getMoveOptions(currentDiceRoll, currentTurn);
-    if (options.length > 0) {
-      const pick = options[Math.floor(Math.random() * options.length)];
-      executeMove(pick.pieceIndex, pick.toPos, currentTurn);
-      redrawPlayScreen();
-      if (extraTurn) {
-        showTemporaryMessage(`${(currentTurn === 'w' ? 'White' : 'Black')} goes again!`);
-        setTimeout(() => { endTurn(); }, 2000);
-      } else {
-        endTurn();
-      }
-    } else {
-      if (debugMode) console.warn("AI has no valid moves. Passing turn...");
-      showTemporaryMessage("AI has no moves. Passing turn...");
-      diceRolled = false;
-      currentDiceRoll = 0;
-      currentTurn = (currentTurn === 'w') ? 'b' : 'w';
-    }
-    aiThinking = false;
-    loadingOverlay.style.display = "none";
-  }, 3000); // 3000ms delay
+  // Remove automatic AI call. (No automatic AI move – all moves are manual.)
 }
 
-/* 12) Main Loop */
+/***********************************
+ * 12) Main Loop
+ ***********************************/
 function mainLoop() {
   if (gameState === "playing") {
     redrawPlayScreen();
-    if (currentTurn === humanColor && !diceRolled) {
-      document.getElementById("rollDiceBtn").style.display = "inline-block";
-    } else {
-      document.getElementById("rollDiceBtn").style.display = "none";
-    }
-    if (currentTurn !== humanColor && currentTurn !== null && !diceRolled && !aiThinking) {
-      aiMove();
-    }
+    // Always display the Roll Dice button so the player can move whichever side they choose.
+    document.getElementById("rollDiceBtn").style.display = "inline-block";
   }
   requestAnimationFrame(mainLoop);
 }
 
-/* 13) Overlays & Navigation */
+/***********************************
+ * 13) Overlays & Navigation
+ ***********************************/
 function hideAllScreens() {
   menuScreen.style.display = "none";
   instructionsScreen.style.display = "none";
@@ -661,7 +652,7 @@ function startPlaying() {
   hideAllScreens();
   gameState = "playing";
   initPieces();
-  // FIX: Set current turn to the human's chosen color so the AI does not play on your turn.
+  // FIX: Set currentTurn to humanColor (so the player controls both sides manually)
   currentTurn = humanColor;
   diceRolled = false;
   currentDiceRoll = 0;
@@ -675,8 +666,10 @@ function showGameOver() {
   gameOverScreen.style.display = "flex";
 }
 
-/* 14) Buttons & Keyboard */
-// Side selection: when a side is chosen, set humanColor and start the game.
+/***********************************
+ * 14) Buttons & Keyboard
+ ***********************************/
+// Side selection: choose your side manually.
 document.getElementById("whiteSideBtn").onclick = () => {
   humanColor = 'w';
   startPlaying();
@@ -698,16 +691,14 @@ document.addEventListener("keydown", (e) => {
   if (gameState === "selectSide") {
     if (key === "w") document.getElementById("whiteSideBtn").click();
     else if (key === "b") document.getElementById("blackSideBtn").click();
-  }
-  else if (gameState === "playing") {
-    if (key === "r" && currentTurn === humanColor && !diceRolled) {
+  } else if (gameState === "playing") {
+    if (key === "r" && !diceRolled) {
       humanRollDice();
     } else if (key === "m") {
       initPieces();
       showMenu();
     }
-  }
-  else if (["instructions", "gameover"].includes(gameState)) {
+  } else if (["instructions", "gameover"].includes(gameState)) {
     if (key === "m") {
       initPieces();
       showMenu();
@@ -721,7 +712,6 @@ function startAll() {
   showMenu();
   requestAnimationFrame(mainLoop);
 }
-
 window.addEventListener("load", startAll);
 </script>
 </body>
