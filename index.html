@@ -140,8 +140,8 @@
     <p>
       1) Roll dice.<br>
       2) Click on a piece to move it.<br>
-      3) Landing on a rosette ends the turn but grants an extra new turn for that player.<br>
-      4) You need an exact roll to finish at position 20.
+      3) Landing on a rosette ends your turn but grants an extra new turn for that side.<br>
+      4) You must get an exact roll to finish at position 20.
     </p>
     <p>Press [M] to return to the Main Menu.</p>
   </div>
@@ -149,9 +149,9 @@
   <!-- Side Selection Screen -->
   <div id="sideScreen" class="overlayScreen">
     <p>Choose Your Side:</p>
-    <button id="whiteSideBtn">White (Go First) [W]</button>
-    <button id="blackSideBtn">Black (Go Second) [B]</button>
-    <p>You can also press W or B on your keyboard.</p>
+    <button id="whiteSideBtn">White (You) [W]</button>
+    <button id="blackSideBtn">Black (You) [B]</button>
+    <p>(If you choose Black, the AI will be White and will go first.)</p>
   </div>
 
   <!-- Game Over Screen -->
@@ -223,8 +223,8 @@ const blackPath = [16,17,18,19,13,12,11,10,9,8,7,6,14,15];
  * 2) Game State Variables
  ***********************************/
 let gameState = "menu";
-let humanColor = null;   // 'w' or 'b'
-let currentTurn = null;  // will be set to the chosen side
+let humanColor = null;   // will be set when player chooses a side
+let currentTurn = null;  // turn: 'w' or 'b'
 let currentDiceRoll = 0;
 let diceRolled = false;
 let aiThinking = false;
@@ -252,14 +252,14 @@ const diceMessageOverlay = document.getElementById("diceMessageOverlay");
 function getPieceCoords(color, pieceIndex, pos) {
   if (pos >= 0 && pos < 20) {
     const sq = boardSquares[pos];
-    return { x: sq.x + boardMarginX + sq.w / 2, y: sq.y + boardMarginY + sq.h / 2 };
+    return { x: sq.x + boardMarginX + sq.w/2, y: sq.y + boardMarginY + sq.h/2 };
   }
   if (pos === 20) {
     const baseY = (color === 'w') ? 100 : 300;
     return { x: boardMarginX + boardWidth + 80, y: boardMarginY + baseY + pieceIndex * 30 };
   }
   if (pos === -1) {
-    if (color === 'w') {
+    if (color === 'w'){
       return { x: boardMarginX + pieceIndex * (SQUARE_SIZE + 5) + 20, y: boardMarginY - 60 };
     } else {
       return { x: boardMarginX + pieceIndex * (SQUARE_SIZE + 5) + 20, y: boardMarginY + boardHeight + 60 };
@@ -364,7 +364,7 @@ function executeMove(pieceIndex, toPos, color) {
   }
   lastMove = { fromPos, toPos, color, pieceIndex };
 
-  // If landing on a rosette, end turn and let same side play.
+  // If landing on a rosette, the same side gets another turn.
   if (toPos < 20 && boardSquares[toPos].rosette) {
     extraTurn = true;
     nextPlayer = color;
@@ -521,7 +521,8 @@ function redrawPlayScreen() {
  ***********************************/
 function handleBoardClick(e) {
   if (gameState !== "playing") return;
-  // Removed check for currentTurn === humanColor to allow manual play for both sides.
+  // Only allow move if it is the human's turn.
+  if (currentTurn !== humanColor) return;
   if (!diceRolled) {
     if (debugMode) console.warn("Must roll dice before moving!");
     return;
@@ -575,7 +576,6 @@ function endTurn() {
 function showTemporaryMessage(msg) {
   diceMessageOverlay.textContent = msg;
   diceMessageOverlay.style.display = "block";
-  // Timeout set to 6000ms (6 seconds)
   setTimeout(() => {
     diceMessageOverlay.style.display = "none";
   }, 6000);
@@ -583,7 +583,7 @@ function showTemporaryMessage(msg) {
 
 function humanRollDice() {
   if (gameState !== "playing") return;
-  // Remove human turn check so both sides are controlled manually.
+  if (currentTurn !== humanColor) return;  // Only allow human to roll on their turn.
   if (diceRolled) {
     if (debugMode) console.warn("Already rolled dice this turn!");
     return;
@@ -598,14 +598,45 @@ function humanRollDice() {
     showTemporaryMessage("No moves. Passing turn...");
     diceRolled = false;
     currentDiceRoll = 0;
-    // Switch turn manually
-    currentTurn = (currentTurn === 'w') ? 'b' : 'w';
+    // Switch turn: if human is white then AI (black) plays; if human is black then AI (white) plays.
+    currentTurn = (humanColor === 'w') ? 'b' : 'w';
     return;
   }
 }
 
 function aiMove() {
-  // Remove automatic AI call. (No automatic AI move – all moves are manual.)
+  if (gameState !== "playing") return;
+  // Only let the AI move when it's not the human's turn.
+  if (currentTurn === humanColor) return;
+  aiThinking = true;
+  loadingOverlay.style.display = "flex";
+  setTimeout(() => {
+    currentDiceRoll = rollDice();
+    diceRolled = true;
+    showTemporaryMessage(`${(currentTurn === 'w' ? 'White' : 'Black')} rolled ${currentDiceRoll}`);
+    if (debugMode) console.log(`AI (${currentTurn === 'w' ? 'White' : 'Black'}) rolled: ${currentDiceRoll}`);
+    const options = getMoveOptions(currentDiceRoll, currentTurn);
+    if (options.length > 0) {
+      // For simplicity, pick a random valid move.
+      const pick = options[Math.floor(Math.random() * options.length)];
+      executeMove(pick.pieceIndex, pick.toPos, currentTurn);
+      redrawPlayScreen();
+      if (extraTurn) {
+        showTemporaryMessage(`${(currentTurn === 'w' ? 'White' : 'Black')} goes again!`);
+        setTimeout(() => { endTurn(); }, 2000);
+      } else {
+        endTurn();
+      }
+    } else {
+      if (debugMode) console.warn("AI has no valid moves. Passing turn...");
+      showTemporaryMessage("AI has no moves. Passing turn...");
+      diceRolled = false;
+      currentDiceRoll = 0;
+      currentTurn = (humanColor === 'w') ? 'b' : 'w';
+    }
+    aiThinking = false;
+    loadingOverlay.style.display = "none";
+  }, 3000);
 }
 
 /***********************************
@@ -614,8 +645,12 @@ function aiMove() {
 function mainLoop() {
   if (gameState === "playing") {
     redrawPlayScreen();
-    // Always display the Roll Dice button so the player can move whichever side they choose.
-    document.getElementById("rollDiceBtn").style.display = "inline-block";
+    // Show the Roll Dice button only if it's the human's turn.
+    document.getElementById("rollDiceBtn").style.display = (currentTurn === humanColor) ? "inline-block" : "none";
+    // Automatically trigger AI move when it's not the human's turn.
+    if (currentTurn !== humanColor && currentTurn !== null && !diceRolled && !aiThinking) {
+      aiMove();
+    }
   }
   requestAnimationFrame(mainLoop);
 }
@@ -652,12 +687,18 @@ function startPlaying() {
   hideAllScreens();
   gameState = "playing";
   initPieces();
-  // FIX: Set currentTurn to humanColor (so the player controls both sides manually)
-  currentTurn = humanColor;
+  // If human chose white, they go first; if human chose black, then AI (white) goes first.
+  currentTurn = (humanColor === 'w') ? 'w' : 'w';
+  // (So if humanColor is 'b', then currentTurn is set to white for the AI.)
   diceRolled = false;
   currentDiceRoll = 0;
   extraTurn = false;
-  showTemporaryMessage(`${(currentTurn === 'w' ? 'White' : 'Black')} Turn! Roll dice...`);
+  // Show message for whoever's turn it is.
+  if (humanColor === 'w') {
+    showTemporaryMessage("White Turn! Roll dice...");
+  } else {
+    showTemporaryMessage("White (AI) Turn! Roll dice...");
+  }
 }
 
 function showGameOver() {
@@ -669,7 +710,7 @@ function showGameOver() {
 /***********************************
  * 14) Buttons & Keyboard
  ***********************************/
-// Side selection: choose your side manually.
+// Side selection: choose your side.  
 document.getElementById("whiteSideBtn").onclick = () => {
   humanColor = 'w';
   startPlaying();
@@ -677,6 +718,7 @@ document.getElementById("whiteSideBtn").onclick = () => {
 
 document.getElementById("blackSideBtn").onclick = () => {
   humanColor = 'b';
+  // If you choose black, then the AI is white and white goes first.
   startPlaying();
 };
 
@@ -692,7 +734,7 @@ document.addEventListener("keydown", (e) => {
     if (key === "w") document.getElementById("whiteSideBtn").click();
     else if (key === "b") document.getElementById("blackSideBtn").click();
   } else if (gameState === "playing") {
-    if (key === "r" && !diceRolled) {
+    if (key === "r" && currentTurn === humanColor && !diceRolled) {
       humanRollDice();
     } else if (key === "m") {
       initPieces();
