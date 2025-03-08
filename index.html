@@ -255,8 +255,9 @@ const boardSquares = [
   { x: 350, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true }
 ];
 
-/* Paths for pieces – note: these determine which boardSquare a piece lands on.
-   (Pieces start off-board at -1; a valid move adds dice roll to the index; finishing is 20.) */
+/* Paths for pieces – these determine the board square a piece lands on.
+   Pieces start off-board at -1; a valid move advances along the index;
+   finishing is marked by 20. */
 const whitePath = [2, 3, 4, 5, 13, 12, 11, 10, 9, 8, 7, 6, 0, 1];
 const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
 
@@ -403,7 +404,7 @@ function executeMove(pieceIndex, toPos, color) {
   // Report piece number as pieceIndex+1
   addMoveToHistory(`${color === 'w' ? "White" : "Black"} moved piece #${pieceIndex+1} from ${fromPos} to ${toPos}`);
 
-  // If landing on a rosette, grant an extra turn (but not when finishing).
+  // If landing on a rosette (and not finishing), grant an extra turn.
   if (toPos < 20 && boardSquares[toPos].rosette) {
     extraTurn = true;
     nextPlayer = color;
@@ -518,6 +519,12 @@ function drawPieces() {
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 2;
     ctx.stroke();
+    // Draw piece number (i+1) in the center
+    ctx.font = "bold 14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#000";
+    ctx.fillText(i+1, c.x, c.y);
     ctx.restore();
   });
   // Draw black pieces
@@ -539,6 +546,12 @@ function drawPieces() {
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.stroke();
+    // Draw piece number (i+1) in the center (using white text for contrast)
+    ctx.font = "bold 14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(i+1, c.x, c.y);
     ctx.restore();
   });
 }
@@ -570,8 +583,10 @@ function handleBoardClick(e) {
   }
   const moves = getMoveOptions(currentDiceRoll, currentTurn);
   if (moves.length === 0) {
-    showTemporaryMessage("No valid moves. Passing turn...");
-    endTurn();
+    showTemporaryMessage("No moves. Passing turn...");
+    diceRolled = false;
+    currentDiceRoll = 0;
+    setTimeout(() => { endTurn(); }, 1000);
     return;
   }
   const rect = canvas.getBoundingClientRect();
@@ -659,7 +674,7 @@ function humanRollDice() {
     showTemporaryMessage("No moves. Passing turn...");
     diceRolled = false;
     currentDiceRoll = 0;
-    currentTurn = (currentTurn === 'w') ? 'b' : 'w';
+    setTimeout(() => { endTurn(); }, 1000);
     return;
   }
 }
@@ -685,11 +700,9 @@ function aiMakeMove() {
     executeMove(pick.pieceIndex, pick.toPos, currentTurn);
     addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${pick.pieceIndex+1} from ${pick.fromPos} to ${pick.toPos}`);
     redrawPlayScreen();
-    // Only display "goes again" if the move landed on a rosette (extraTurn true)
+    // Only display "goes again" if extraTurn is true.
     if (extraTurn) {
       showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} goes again!`);
-    } else {
-      showTemporaryMessage(`Turn over. Now ${(currentTurn === 'w' ? "Black" : "White")}'s turn!`);
     }
     setTimeout(() => { endTurn(); }, 2000);
   } else {
