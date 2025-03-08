@@ -110,7 +110,7 @@
       text-align: left;
       width: 250px;
     }
-    /* Temporary message overlay */
+    /* Temporary message overlay (now 12s) */
     #diceMessageOverlay {
       position: absolute;
       left: 50%;
@@ -185,13 +185,13 @@
     <div id="instructionsScreen" class="overlayScreen">
       <p>
         White goes first. Black goes second.<br>
-        roll the rice<br>
-        click one of your pieces to move it.<br>
-        if you land on a square with your opponent's piece, it is moved back to the start.<br>
-        you cannot land on a square that is occupied already by your own piece.<br>
-        Landing on a rosette grants an extra turn and gives your piece immunity from being killed.<br>
+        Roll the dice.<br>
+        Click one of your pieces to move it.<br>
+        If you land on a square with your opponent's piece, it is moved back to the start.<br>
+        You cannot land on a square that is already occupied by your own piece.<br>
+        Landing on a rosette grants an extra turn and gives your piece immunity from being killed for as long as it is on a rosette.<br>
         You must get an exact roll to move your piece through the finish line.<br>
-        if you have no valid moves, it is your opponent's turn.<br>
+        If you have no valid moves, it is your opponent's turn.<br>
         <br>
         Press [M] to return to the Main Menu.
       </p>
@@ -278,7 +278,7 @@ const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
  ***********************************/
 let gameState = "menu";
 let humanColor = null;   // 'w' or 'b'
-let aiDifficulty = "easy"; // "easy", "medium", "hard"
+let aiDifficulty = "easy"; // "easy", "medium", or "hard"
 let currentTurn = null;  // If human is white, white starts; otherwise AI (white) goes first.
 let currentDiceRoll = 0;
 let diceRolled = false;
@@ -593,7 +593,7 @@ function showTemporaryMessage(msg) {
   diceMessageOverlay.style.display = "block";
   setTimeout(() => {
     diceMessageOverlay.style.display = "none";
-  }, 6000);
+  }, 12000); // 12 seconds
 }
 
 function updateDiceRollDisplay() {
@@ -634,15 +634,7 @@ function humanRollDice() {
     endTurn();
     return;
   }
-  if (options.length === 1) {
-    const m = options[0];
-    executeMove(m.pieceIndex, m.toPos, currentTurn);
-    redrawPlayScreen();
-    showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${m.pieceIndex+1}`);
-    endTurn();
-    return;
-  }
-  // If multiple moves, wait for user click on a piece.
+  // Do NOT auto-move if exactly one option; require user click even if only one move.
 }
 
 /***********************************
@@ -653,7 +645,8 @@ function handleBoardClick(e) {
   if (currentTurn !== humanColor) return;
   if (!diceRolled) return;
   const moves = getMoveOptions(currentDiceRoll, currentTurn);
-  if (moves.length <= 1) return;
+  if (moves.length === 0) return;
+  // Wait for user to click a piece (even if one move exists)
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left, my = e.clientY - rect.top;
   const own = (currentTurn === 'w') ? whitePieces : blackPieces;
@@ -687,8 +680,8 @@ function aiAutoRoll() {
     showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
     updateDiceRollDisplay();
     redrawPlayScreen();
-    // Delay 1 second to let the roll message be seen
-    setTimeout(aiMakeMove, 1000);
+    // Delay 2 seconds so the AI roll is visible before moving
+    setTimeout(aiMakeMove, 2000);
   }
 }
 
@@ -702,7 +695,6 @@ function aiMakeMove() {
     endTurn();
     return;
   }
-  // For now, pick a random move; difficulty logic can be added here if desired.
   const pick = options[Math.floor(Math.random() * options.length)];
   executeMove(pick.pieceIndex, pick.toPos, currentTurn);
   redrawPlayScreen();
@@ -796,7 +788,6 @@ function showGameOver() {
 /***********************************
  * 16) Buttons & Keyboard
  ***********************************/
-// Side selection
 document.getElementById("whiteSideBtn").onclick = () => {
   humanColor = 'w';
   showDifficultyScreen();
@@ -805,7 +796,6 @@ document.getElementById("blackSideBtn").onclick = () => {
   humanColor = 'b';
   showDifficultyScreen();
 };
-// Difficulty selection
 document.getElementById("easyBtn").onclick = () => setDifficulty("easy");
 document.getElementById("mediumBtn").onclick = () => setDifficulty("medium");
 document.getElementById("hardBtn").onclick = () => setDifficulty("hard");
