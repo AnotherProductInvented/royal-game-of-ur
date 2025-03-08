@@ -74,6 +74,8 @@
       color: #8b4513;
       border: 4px double #8b4513;
       border-radius: 6px;
+      padding: 20px;
+      box-sizing: border-box;
     }
     button {
       font-size: 18px;
@@ -181,14 +183,18 @@
 
     <!-- Instructions Screen -->
     <div id="instructionsScreen" class="overlayScreen">
-      <p><strong>How to Play</strong></p>
       <p>
-        1) Roll dice.<br>
-        2) If more than one valid move, click a piece to choose. Otherwise it moves automatically.<br>
-        3) Landing on a rosette ends the turn but grants an extra turn.<br>
-        4) You must get an exact roll to finish at position 20.
+        White goes first. Black goes second.<br>
+        roll the rice<br>
+        click one of your pieces to move it.<br>
+        if you land on a square with your opponent's piece, it is moved back to the start.<br>
+        you cannot land on a square that is occupied already by your own piece.<br>
+        Landing on a rosette grants an extra turn and gives your piece immunity from being killed.<br>
+        You must get an exact roll to move your piece through the finish line.<br>
+        if you have no valid moves, it is your opponent's turn.<br>
+        <br>
+        Press [M] to return to the Main Menu.
       </p>
-      <p>Press [M] to return to the Main Menu.</p>
     </div>
 
     <!-- Side Selection Screen -->
@@ -197,6 +203,14 @@
       <button id="whiteSideBtn">White (You) [W]</button>
       <button id="blackSideBtn">Black (You) [B]</button>
       <p>(If you choose Black, White (AI) goes first.)</p>
+    </div>
+
+    <!-- Difficulty Selection Screen -->
+    <div id="difficultyScreen" class="overlayScreen">
+      <p>Select AI Difficulty:</p>
+      <button id="easyBtn">Easy</button>
+      <button id="mediumBtn">Medium</button>
+      <button id="hardBtn">Hard</button>
     </div>
 
     <!-- Game Over Screen -->
@@ -263,8 +277,9 @@ const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
  * 2) Game State Variables
  ***********************************/
 let gameState = "menu";
-let humanColor = null;  // 'w' or 'b'
-let currentTurn = null; // If you choose Black, AI controls White and goes first
+let humanColor = null;   // 'w' or 'b'
+let aiDifficulty = "easy"; // "easy", "medium", "hard"
+let currentTurn = null;  // If human is white, white starts; otherwise AI (white) goes first.
 let currentDiceRoll = 0;
 let diceRolled = false;
 let extraTurn = false;
@@ -281,6 +296,7 @@ let moveHistory = []; // store last 5 moves
 const menuScreen = document.getElementById("menuScreen");
 const instructionsScreen = document.getElementById("instructionsScreen");
 const sideScreen = document.getElementById("sideScreen");
+const difficultyScreen = document.getElementById("difficultyScreen");
 const gameOverScreen = document.getElementById("gameOverScreen");
 const gameOverText = document.getElementById("gameOverText");
 const diceMessageOverlay = document.getElementById("diceMessageOverlay");
@@ -294,12 +310,10 @@ function getPieceCoords(color, pieceIndex, pos) {
     return { x: sq.x + boardMarginX + sq.w / 2, y: sq.y + boardMarginY + sq.h / 2 };
   }
   if (pos === 20) {
-    // Off-board "finished" location
     const baseY = (color === 'w') ? 100 : 300;
     return { x: boardMarginX + boardWidth + 80, y: boardMarginY + baseY + pieceIndex * 30 };
   }
   if (pos === -1) {
-    // Off-board "starting" location
     if (color === 'w') {
       return { x: boardMarginX + pieceIndex * (SQUARE_SIZE + 5) + 20, y: boardMarginY - 60 };
     } else {
@@ -352,7 +366,6 @@ function getValidMove(piecePos, diceValue, color) {
     }
     pathIndex = idx;
   } else if (piecePos === 20) {
-    // Already finished
     return null;
   }
   const newIndex = pathIndex + diceValue;
@@ -364,9 +377,7 @@ function getValidMove(piecePos, diceValue, color) {
 function canLandOn(pos, color) {
   const own = (color === 'w') ? whitePieces : blackPieces;
   const opp = (color === 'w') ? blackPieces : whitePieces;
-  // Can't land on a square occupied by own piece:
   if (pos < 20 && own.includes(pos)) return false;
-  // Can't capture if it's a rosette:
   if (pos < 20 && opp.includes(pos) && boardSquares[pos].rosette) return false;
   return true;
 }
@@ -375,7 +386,7 @@ function getMoveOptions(diceValue, color) {
   const own = (color === 'w') ? whitePieces : blackPieces;
   const moves = [];
   own.forEach((pos, i) => {
-    if (pos === 20) return; // piece is finished
+    if (pos === 20) return;
     const target = getValidMove(pos, diceValue, color);
     if (target !== null && canLandOn(target, color)) {
       moves.push({ pieceIndex: i, fromPos: pos, toPos: target });
@@ -392,8 +403,6 @@ function executeMove(pieceIndex, toPos, color) {
   const opp = (color === 'w') ? blackPieces : whitePieces;
   const fromPos = own[pieceIndex];
   own[pieceIndex] = toPos;
-
-  // Capture if not on a rosette
   if (toPos < 20) {
     const oppIdx = opp.indexOf(toPos);
     if (oppIdx !== -1) {
@@ -403,8 +412,6 @@ function executeMove(pieceIndex, toPos, color) {
   }
   lastMove = { fromPos, toPos, color, pieceIndex };
   addMoveToHistory(`${color === 'w' ? "White" : "Black"} moved piece #${pieceIndex+1} from ${fromPos} to ${toPos}`);
-
-  // If landing on a rosette (and not finishing), grant an extra turn
   if (toPos < 20 && boardSquares[toPos].rosette) {
     extraTurn = true;
     nextPlayer = color;
@@ -412,8 +419,6 @@ function executeMove(pieceIndex, toPos, color) {
     extraTurn = false;
     nextPlayer = (color === 'w') ? 'b' : 'w';
   }
-
-  // Check for win
   const finishedCount = own.filter(p => p === 20).length;
   if (finishedCount === NUM_PIECES) {
     gameOverText.textContent = (color === humanColor) ? "You Win!" : "You Lose!";
@@ -423,13 +428,9 @@ function executeMove(pieceIndex, toPos, color) {
   }
 }
 
-/***********************************
- * 8) Highlight & Draw
- ***********************************/
 function highlightLastMove() {
   if (!lastMove) return;
   const { fromPos, toPos, color, pieceIndex } = lastMove;
-  // Highlight start
   if (fromPos >= 0 && fromPos < 20) {
     const sq = boardSquares[fromPos];
     ctx.fillStyle = "rgba(255,255,0,0.5)";
@@ -439,7 +440,6 @@ function highlightLastMove() {
     ctx.fillStyle = "rgba(255,255,0,0.5)";
     ctx.fillRect(box.x, box.y, box.w, box.h);
   }
-  // Highlight end
   if (toPos >= 0 && toPos < 20) {
     const sq2 = boardSquares[toPos];
     ctx.fillStyle = "rgba(0,128,255,0.5)";
@@ -451,6 +451,9 @@ function highlightLastMove() {
   }
 }
 
+/***********************************
+ * 8) Drawing
+ ***********************************/
 function drawFancySquare(x, y, w, h) {
   const cx = x + w/2, cy = y + h/2;
   const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 45);
@@ -501,7 +504,6 @@ function drawBoard() {
 }
 
 function drawPieces() {
-  // Draw white pieces
   whitePieces.forEach((pos, i) => {
     if (pos === 20) return;
     const c = getPieceCoords('w', i, pos);
@@ -520,7 +522,6 @@ function drawPieces() {
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 2;
     ctx.stroke();
-    // Number on piece
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -528,7 +529,6 @@ function drawPieces() {
     ctx.fillText(i+1, c.x, c.y);
     ctx.restore();
   });
-  // Draw black pieces
   blackPieces.forEach((pos, i) => {
     if (pos === 20) return;
     const c = getPieceCoords('b', i, pos);
@@ -547,7 +547,6 @@ function drawPieces() {
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.stroke();
-    // Number on piece
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -581,8 +580,6 @@ function endTurn() {
   currentTurn = nextPlayer;
   showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
   redrawPlayScreen();
-
-  // If new turn is AI, let it go immediately
   if (currentTurn !== humanColor) {
     aiAutoRoll();
   }
@@ -594,7 +591,6 @@ function endTurn() {
 function showTemporaryMessage(msg) {
   diceMessageOverlay.textContent = msg;
   diceMessageOverlay.style.display = "block";
-  // Let the message fade on its own after 6s
   setTimeout(() => {
     diceMessageOverlay.style.display = "none";
   }, 6000);
@@ -622,22 +618,15 @@ function updateMoveHistoryDisplay() {
 function humanRollDice() {
   if (gameState !== "playing") return;
   if (currentTurn !== humanColor) return;
-  if (diceRolled) {
-    if (debugMode) console.warn("Already rolled dice this turn!");
-    return;
-  }
-
+  if (diceRolled) return;
   currentDiceRoll = rollDice();
   diceRolled = true;
   addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
   showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
   updateDiceRollDisplay();
   redrawPlayScreen();
-
   const options = getMoveOptions(currentDiceRoll, currentTurn);
-
   if (options.length === 0) {
-    // No moves, pass turn
     showTemporaryMessage("No moves. Passing turn...");
     nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
     diceRolled = false;
@@ -646,7 +635,6 @@ function humanRollDice() {
     return;
   }
   if (options.length === 1) {
-    // Exactly one move, do it automatically
     const m = options[0];
     executeMove(m.pieceIndex, m.toPos, currentTurn);
     redrawPlayScreen();
@@ -654,7 +642,7 @@ function humanRollDice() {
     endTurn();
     return;
   }
-  // If multiple moves, wait for user to click the piece on the board
+  // If multiple moves, wait for user click on a piece.
 }
 
 /***********************************
@@ -663,13 +651,9 @@ function humanRollDice() {
 function handleBoardClick(e) {
   if (gameState !== "playing") return;
   if (currentTurn !== humanColor) return;
-  if (!diceRolled) return; // must roll dice first
-
-  // If there's exactly 1 or 0 moves, we've already handled them automatically
+  if (!diceRolled) return;
   const moves = getMoveOptions(currentDiceRoll, currentTurn);
   if (moves.length <= 1) return;
-
-  // Otherwise, let user pick which piece to move
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left, my = e.clientY - rect.top;
   const own = (currentTurn === 'w') ? whitePieces : blackPieces;
@@ -680,7 +664,7 @@ function handleBoardClick(e) {
     const dx = mx - c.x, dy = my - c.y;
     if (Math.sqrt(dx * dx + dy * dy) <= 18) {
       const found = moves.find(m => m.pieceIndex === i);
-      if (!found) return; // not valid for the current roll
+      if (!found) return;
       executeMove(i, found.toPos, currentTurn);
       redrawPlayScreen();
       showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${i+1}`);
@@ -697,21 +681,20 @@ function aiAutoRoll() {
   if (gameState !== "playing") return;
   if (currentTurn === humanColor) return;
   if (!diceRolled) {
-    // Roll dice
     currentDiceRoll = rollDice();
     diceRolled = true;
     addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
     showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
     updateDiceRollDisplay();
     redrawPlayScreen();
-    aiMakeMove();
+    // Delay 1 second to let the roll message be seen
+    setTimeout(aiMakeMove, 1000);
   }
 }
 
 function aiMakeMove() {
   const options = getMoveOptions(currentDiceRoll, currentTurn);
   if (options.length === 0) {
-    // No moves, pass turn
     showTemporaryMessage("AI has no moves. Passing turn...");
     nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
     diceRolled = false;
@@ -719,16 +702,15 @@ function aiMakeMove() {
     endTurn();
     return;
   }
-  // Just pick random
+  // For now, pick a random move; difficulty logic can be added here if desired.
   const pick = options[Math.floor(Math.random() * options.length)];
   executeMove(pick.pieceIndex, pick.toPos, currentTurn);
   redrawPlayScreen();
   if (extraTurn) {
     showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} goes again!`);
-    // same side goes again => no pass
     diceRolled = false;
     currentDiceRoll = 0;
-    aiAutoRoll(); // immediate new roll
+    aiAutoRoll();
   } else {
     endTurn();
   }
@@ -752,6 +734,7 @@ function hideAllScreens() {
   menuScreen.style.display = "none";
   instructionsScreen.style.display = "none";
   sideScreen.style.display = "none";
+  difficultyScreen.style.display = "none";
   gameOverScreen.style.display = "none";
 }
 
@@ -773,11 +756,21 @@ function showSideSelect() {
   sideScreen.style.display = "flex";
 }
 
+function showDifficultyScreen() {
+  hideAllScreens();
+  gameState = "selectDifficulty";
+  difficultyScreen.style.display = "flex";
+}
+
+function setDifficulty(d) {
+  aiDifficulty = d;
+  startPlaying();
+}
+
 function startPlaying() {
   hideAllScreens();
   gameState = "playing";
   initPieces();
-  // Turn order: if human is white, human starts; else AI (white) goes first.
   if (humanColor === 'w') {
     currentTurn = 'w';
   } else {
@@ -789,8 +782,6 @@ function startPlaying() {
   addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
   showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
   redrawPlayScreen();
-
-  // If the AI goes first, do so immediately
   if (currentTurn !== humanColor) {
     aiAutoRoll();
   }
@@ -805,27 +796,34 @@ function showGameOver() {
 /***********************************
  * 16) Buttons & Keyboard
  ***********************************/
+// Side selection
 document.getElementById("whiteSideBtn").onclick = () => {
   humanColor = 'w';
-  startPlaying();
+  showDifficultyScreen();
 };
-
 document.getElementById("blackSideBtn").onclick = () => {
   humanColor = 'b';
-  startPlaying();
+  showDifficultyScreen();
 };
+// Difficulty selection
+document.getElementById("easyBtn").onclick = () => setDifficulty("easy");
+document.getElementById("mediumBtn").onclick = () => setDifficulty("medium");
+document.getElementById("hardBtn").onclick = () => setDifficulty("hard");
 
 document.getElementById("newGameBtn").onclick = () => showSideSelect();
 document.getElementById("instructionsBtn").onclick = () => showInstructions();
 document.getElementById("gameOverNewGameBtn").onclick = () => showSideSelect();
 document.getElementById("rollDiceBtn").addEventListener("click", humanRollDice);
 
-/* Keyboard shortcuts */
 document.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
   if (gameState === "selectSide") {
     if (key === "w") document.getElementById("whiteSideBtn").click();
     else if (key === "b") document.getElementById("blackSideBtn").click();
+  } else if (gameState === "selectDifficulty") {
+    if (key === "e") setDifficulty("easy");
+    else if (key === "m") setDifficulty("medium");
+    else if (key === "h") setDifficulty("hard");
   } else if (gameState === "playing") {
     if (key === "r" && currentTurn === humanColor && !diceRolled) {
       humanRollDice();
@@ -841,9 +839,6 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-/***********************************
- * 17) Start the App
- ***********************************/
 canvas.addEventListener("mousedown", handleBoardClick);
 
 function startAll() {
