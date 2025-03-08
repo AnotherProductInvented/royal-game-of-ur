@@ -19,7 +19,7 @@
       text-align: center;
       font-family: "Papyrus", cursive, serif;
     }
-    /* New wrapper for horizontal layout */
+    /* Wrapper for horizontal layout */
     #gameWrapper {
       display: flex;
       align-items: flex-start;
@@ -28,13 +28,21 @@
       margin: 20px;
       width: 100%;
     }
-    #leftPanel, #rightPanel {
+    /* Left Panel for dice */
+    #leftPanel {
+      min-width: 150px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
     }
-    /* Game container remains mostly the same */
+    /* Right Panel for move history */
+    #rightPanel {
+      min-width: 250px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Game container in the center */
     #gameContainer {
       position: relative;
       width: 1020px;
@@ -74,7 +82,7 @@
       cursor: pointer;
       font-family: "Papyrus", cursive, serif;
     }
-    /* Left panel – Dice roll controls */
+    /* Dice Roll Display */
     #diceRollDisplay {
       font-size: 24px;
       padding: 10px;
@@ -88,7 +96,7 @@
       padding: 6px 10px;
       margin: 4px;
     }
-    /* Right panel – Move history */
+    /* Move History in Right Panel */
     #moveHistory {
       font-size: 16px;
       padding: 10px;
@@ -149,10 +157,6 @@
       max-width: 100px;
       z-index: 2000;
     }
-    /* (Optional) UI bar at bottom of canvas */
-    #uiBar {
-      fill: #f5f2e8;
-    }
   </style>
 </head>
 <body>
@@ -181,7 +185,7 @@
       <p>
         1) Roll dice.<br>
         2) Click on a piece to move it.<br>
-        3) Landing on a rosette ends the turn but grants an extra new turn for that side.<br>
+        3) Landing on a rosette ends the turn but grants an extra turn.<br>
         4) You must get an exact roll to finish at position 20.
       </p>
       <p>Press [M] to return to the Main Menu.</p>
@@ -251,7 +255,8 @@ const boardSquares = [
   { x: 350, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true }
 ];
 
-/* Paths for pieces */
+/* Paths for pieces – note: these determine which boardSquare a piece lands on.
+   (Pieces start off-board at -1; a valid move adds dice roll to the index; finishing is 20.) */
 const whitePath = [2, 3, 4, 5, 13, 12, 11, 10, 9, 8, 7, 6, 0, 1];
 const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
 
@@ -259,8 +264,8 @@ const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
  * 2) Game State Variables
  ***********************************/
 let gameState = "menu";
-let humanColor = null;  // 'w' or 'b' – chosen by the player
-let currentTurn = null; // Turn indicator: if you choose Black, AI controls White (and goes first)
+let humanColor = null;  // 'w' or 'b'
+let currentTurn = null; // If you choose Black, AI controls White and goes first.
 let currentDiceRoll = 0;
 let diceRolled = false;
 let extraTurn = false;
@@ -269,7 +274,7 @@ const debugMode = true;
 const NUM_PIECES = 7;
 let whitePieces = [], blackPieces = [];
 let lastMove = null;
-let moveHistory = []; // store last 5 moves
+let moveHistory = []; // stores last 5 moves
 
 /***********************************
  * 3) Overlays
@@ -376,13 +381,6 @@ function getMoveOptions(diceValue, color) {
   return moves;
 }
 
-function canCaptureMove(pos, color) {
-  if (pos < 0 || pos >= 20) return false;
-  if (boardSquares[pos].rosette) return false;
-  const opp = (color === 'w') ? blackPieces : whitePieces;
-  return opp.includes(pos);
-}
-
 /***********************************
  * 7) Move Execution & Highlight
  ***********************************/
@@ -397,14 +395,15 @@ function executeMove(pieceIndex, toPos, color) {
     const oppIdx = opp.indexOf(toPos);
     if (oppIdx !== -1) {
       opp[oppIdx] = -1;
-      addMoveToHistory(`${color === 'w' ? "White" : "Black"} captured on #${toPos}`);
-      if (debugMode) console.log(`${color === 'w' ? "White" : "Black"} captured on #${toPos}`);
+      addMoveToHistory(`${color === 'w' ? "White" : "Black"} captured on square #${toPos}`);
+      if (debugMode) console.log(`${color === 'w' ? "White" : "Black"} captured on square #${toPos}`);
     }
   }
   lastMove = { fromPos, toPos, color, pieceIndex };
-  addMoveToHistory(`${color === 'w' ? "White" : "Black"} moved piece #${pieceIndex} from ${fromPos} to ${toPos}`);
+  // Report piece number as pieceIndex+1
+  addMoveToHistory(`${color === 'w' ? "White" : "Black"} moved piece #${pieceIndex+1} from ${fromPos} to ${toPos}`);
 
-  // If landing on a rosette, the same side gets another turn.
+  // If landing on a rosette, grant an extra turn (but not when finishing).
   if (toPos < 20 && boardSquares[toPos].rosette) {
     extraTurn = true;
     nextPlayer = color;
@@ -564,7 +563,6 @@ function redrawPlayScreen() {
  ***********************************/
 function handleBoardClick(e) {
   if (gameState !== "playing") return;
-  // Only allow moves for the human–controlled side.
   if (currentTurn !== humanColor) return;
   if (!diceRolled) {
     if (debugMode) console.warn("Must roll dice before moving!");
@@ -587,12 +585,12 @@ function handleBoardClick(e) {
     if (Math.sqrt(dx * dx + dy * dy) <= 18) {
       const found = moves.find(m => m.pieceIndex === i);
       if (!found) {
-        if (debugMode) console.warn(`Piece #${i} can't move with dice=${currentDiceRoll}`);
+        if (debugMode) console.warn(`Piece #${i+1} can't move with dice=${currentDiceRoll}`);
         return;
       }
       executeMove(i, found.toPos, currentTurn);
       redrawPlayScreen();
-      showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${i}`);
+      showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${i+1}`);
       endTurn();
       return;
     }
@@ -609,7 +607,6 @@ function endTurn() {
     currentTurn = nextPlayer;
     showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
     redrawPlayScreen();
-    // If it's AI's turn, auto-roll after a delay.
     if (currentTurn !== humanColor) {
       setTimeout(aiAutoRoll, 1500);
     }
@@ -686,9 +683,14 @@ function aiMakeMove() {
   if (options.length > 0) {
     const pick = options[Math.floor(Math.random() * options.length)];
     executeMove(pick.pieceIndex, pick.toPos, currentTurn);
-    addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${pick.pieceIndex} from ${pick.fromPos} to ${pick.toPos}`);
+    addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${pick.pieceIndex+1} from ${pick.fromPos} to ${pick.toPos}`);
     redrawPlayScreen();
-    showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} goes again!`);
+    // Only display "goes again" if the move landed on a rosette (extraTurn true)
+    if (extraTurn) {
+      showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} goes again!`);
+    } else {
+      showTemporaryMessage(`Turn over. Now ${(currentTurn === 'w' ? "Black" : "White")}'s turn!`);
+    }
     setTimeout(() => { endTurn(); }, 2000);
   } else {
     showTemporaryMessage("AI has no moves. Passing turn...");
@@ -742,11 +744,10 @@ function startPlaying() {
   hideAllScreens();
   gameState = "playing";
   initPieces();
-  // Set turn order based on chosen side.
+  // Turn order: if human is white, human starts; otherwise AI (white) goes first.
   if (humanColor === 'w') {
     currentTurn = 'w';
   } else {
-    // If you chose Black, AI controls White and goes first.
     currentTurn = 'w';
   }
   diceRolled = false;
@@ -769,7 +770,6 @@ function showGameOver() {
 /***********************************
  * 14) Buttons & Keyboard
  ***********************************/
-// Side selection: choose your side.
 document.getElementById("whiteSideBtn").onclick = () => {
   humanColor = 'w';
   startPlaying();
