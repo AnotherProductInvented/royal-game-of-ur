@@ -110,7 +110,7 @@
       text-align: left;
       width: 250px;
     }
-    /* Temporary message overlay (now 12s) */
+    /* Temporary message overlay (2 seconds) */
     #diceMessageOverlay {
       position: absolute;
       left: 50%;
@@ -558,7 +558,7 @@ function drawPieces() {
 
 function drawUI() {
   ctx.fillStyle = "#f5f2e8";
-  ctx.fillRect(0, canvasHeight - 30, canvasWidth, 30);
+  ctx.fillRect(0, canvasHeight - 30, canvasWidth, canvasHeight);
   ctx.strokeStyle = "#000";
   ctx.strokeRect(0, canvasHeight - 30, canvasWidth, 30);
 }
@@ -573,16 +573,21 @@ function redrawPlayScreen() {
 
 /***********************************
  * 9) Turn End & Next Turn
+ * isHumanTurn: true if the turn that just ended was human's.
  ***********************************/
-function endTurn() {
+function endTurn(isHumanTurn) {
   diceRolled = false;
   currentDiceRoll = 0;
-  currentTurn = nextPlayer;
-  showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
-  redrawPlayScreen();
-  if (currentTurn !== humanColor) {
-    aiAutoRoll();
-  }
+  // Delay depends on whose turn just ended:
+  let delay = isHumanTurn ? 1000 : 2000;
+  setTimeout(() => {
+    currentTurn = nextPlayer;
+    showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
+    redrawPlayScreen();
+    if (currentTurn !== humanColor) {
+      setTimeout(() => { aiAutoRoll(); }, 2000);
+    }
+  }, delay);
 }
 
 /***********************************
@@ -593,7 +598,7 @@ function showTemporaryMessage(msg) {
   diceMessageOverlay.style.display = "block";
   setTimeout(() => {
     diceMessageOverlay.style.display = "none";
-  }, 12000); // 12 seconds
+  }, 2000); // 2 seconds for all signs
 }
 
 function updateDiceRollDisplay() {
@@ -631,10 +636,10 @@ function humanRollDice() {
     nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
     diceRolled = false;
     currentDiceRoll = 0;
-    endTurn();
+    endTurn(true);
     return;
   }
-  // Do NOT auto-move if exactly one option; require user click even if only one move.
+  // Even if exactly one move exists, require the human to click a piece.
 }
 
 /***********************************
@@ -646,7 +651,6 @@ function handleBoardClick(e) {
   if (!diceRolled) return;
   const moves = getMoveOptions(currentDiceRoll, currentTurn);
   if (moves.length === 0) return;
-  // Wait for user to click a piece (even if one move exists)
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left, my = e.clientY - rect.top;
   const own = (currentTurn === 'w') ? whitePieces : blackPieces;
@@ -661,7 +665,7 @@ function handleBoardClick(e) {
       executeMove(i, found.toPos, currentTurn);
       redrawPlayScreen();
       showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${i+1}`);
-      endTurn();
+      endTurn(true);
       return;
     }
   }
@@ -680,7 +684,7 @@ function aiAutoRoll() {
     showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
     updateDiceRollDisplay();
     redrawPlayScreen();
-    // Delay 2 seconds so the AI roll is visible before moving
+    // Delay 2 seconds to show roll before moving
     setTimeout(aiMakeMove, 2000);
   }
 }
@@ -692,7 +696,7 @@ function aiMakeMove() {
     nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
     diceRolled = false;
     currentDiceRoll = 0;
-    endTurn();
+    endTurn(false);
     return;
   }
   const pick = options[Math.floor(Math.random() * options.length)];
@@ -704,7 +708,7 @@ function aiMakeMove() {
     currentDiceRoll = 0;
     aiAutoRoll();
   } else {
-    endTurn();
+    endTurn(false);
   }
 }
 
@@ -763,11 +767,7 @@ function startPlaying() {
   hideAllScreens();
   gameState = "playing";
   initPieces();
-  if (humanColor === 'w') {
-    currentTurn = 'w';
-  } else {
-    currentTurn = 'w';
-  }
+  currentTurn = (humanColor === 'w') ? 'w' : 'w'; // white always starts
   diceRolled = false;
   currentDiceRoll = 0;
   extraTurn = false;
