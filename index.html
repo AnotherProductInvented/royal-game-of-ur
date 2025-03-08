@@ -255,9 +255,7 @@ const boardSquares = [
   { x: 350, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true }
 ];
 
-/* Paths for pieces – these determine the board square a piece lands on.
-   Pieces start off-board at -1; a valid move advances along the index;
-   finishing is marked by 20. */
+/* Paths for pieces */
 const whitePath = [2, 3, 4, 5, 13, 12, 11, 10, 9, 8, 7, 6, 0, 1];
 const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
 
@@ -275,7 +273,7 @@ const debugMode = true;
 const NUM_PIECES = 7;
 let whitePieces = [], blackPieces = [];
 let lastMove = null;
-let moveHistory = []; // stores last 5 moves
+let moveHistory = []; // store last 5 moves
 
 /***********************************
  * 3) Overlays
@@ -297,11 +295,13 @@ function getPieceCoords(color, pieceIndex, pos) {
     return { x: sq.x + boardMarginX + sq.w / 2, y: sq.y + boardMarginY + sq.h / 2 };
   }
   if (pos === 20) {
+    // Off-board "finished" location
     const baseY = (color === 'w') ? 100 : 300;
     return { x: boardMarginX + boardWidth + 80, y: boardMarginY + baseY + pieceIndex * 30 };
   }
   if (pos === -1) {
-    if (color === 'w'){
+    // Off-board "starting" location
+    if (color === 'w') {
       return { x: boardMarginX + pieceIndex * (SQUARE_SIZE + 5) + 20, y: boardMarginY - 60 };
     } else {
       return { x: boardMarginX + pieceIndex * (SQUARE_SIZE + 5) + 20, y: boardMarginY + boardHeight + 60 };
@@ -353,6 +353,7 @@ function getValidMove(piecePos, diceValue, color) {
     }
     pathIndex = idx;
   } else if (piecePos === 20) {
+    // Already finished
     return null;
   }
   const newIndex = pathIndex + diceValue;
@@ -364,7 +365,9 @@ function getValidMove(piecePos, diceValue, color) {
 function canLandOn(pos, color) {
   const own = (color === 'w') ? whitePieces : blackPieces;
   const opp = (color === 'w') ? blackPieces : whitePieces;
+  // Can't land on a square occupied by own piece:
   if (pos < 20 && own.includes(pos)) return false;
+  // Can't capture if it's a rosette:
   if (pos < 20 && opp.includes(pos) && boardSquares[pos].rosette) return false;
   return true;
 }
@@ -373,7 +376,7 @@ function getMoveOptions(diceValue, color) {
   const own = (color === 'w') ? whitePieces : blackPieces;
   const moves = [];
   own.forEach((pos, i) => {
-    if (pos === 20) return;
+    if (pos === 20) return; // piece is finished
     const target = getValidMove(pos, diceValue, color);
     if (target !== null && canLandOn(target, color)) {
       moves.push({ pieceIndex: i, fromPos: pos, toPos: target });
@@ -391,20 +394,18 @@ function executeMove(pieceIndex, toPos, color) {
   const fromPos = own[pieceIndex];
   own[pieceIndex] = toPos;
 
-  // Capture if not on a rosette.
+  // Capture if not on a rosette
   if (toPos < 20) {
     const oppIdx = opp.indexOf(toPos);
     if (oppIdx !== -1) {
       opp[oppIdx] = -1;
       addMoveToHistory(`${color === 'w' ? "White" : "Black"} captured on square #${toPos}`);
-      if (debugMode) console.log(`${color === 'w' ? "White" : "Black"} captured on square #${toPos}`);
     }
   }
   lastMove = { fromPos, toPos, color, pieceIndex };
-  // Report piece number as pieceIndex+1
   addMoveToHistory(`${color === 'w' ? "White" : "Black"} moved piece #${pieceIndex+1} from ${fromPos} to ${toPos}`);
 
-  // If landing on a rosette (and not finishing), grant an extra turn.
+  // If landing on a rosette (and not finishing), grant an extra turn
   if (toPos < 20 && boardSquares[toPos].rosette) {
     extraTurn = true;
     nextPlayer = color;
@@ -413,6 +414,7 @@ function executeMove(pieceIndex, toPos, color) {
     nextPlayer = (color === 'w') ? 'b' : 'w';
   }
 
+  // Check for win
   const finishedCount = own.filter(p => p === 20).length;
   if (finishedCount === NUM_PIECES) {
     gameOverText.textContent = (color === humanColor) ? "You Win!" : "You Lose!";
@@ -425,7 +427,7 @@ function executeMove(pieceIndex, toPos, color) {
 function highlightLastMove() {
   if (!lastMove) return;
   const { fromPos, toPos, color, pieceIndex } = lastMove;
-  // Highlight starting square:
+  // Highlight start
   if (fromPos >= 0 && fromPos < 20) {
     const sq = boardSquares[fromPos];
     ctx.fillStyle = "rgba(255,255,0,0.5)";
@@ -435,7 +437,7 @@ function highlightLastMove() {
     ctx.fillStyle = "rgba(255,255,0,0.5)";
     ctx.fillRect(box.x, box.y, box.w, box.h);
   }
-  // Highlight ending square:
+  // Highlight end
   if (toPos >= 0 && toPos < 20) {
     const sq2 = boardSquares[toPos];
     ctx.fillStyle = "rgba(0,128,255,0.5)";
@@ -519,7 +521,7 @@ function drawPieces() {
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 2;
     ctx.stroke();
-    // Draw piece number (i+1) in the center
+    // Number on piece
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -546,7 +548,7 @@ function drawPieces() {
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.stroke();
-    // Draw piece number (i+1) in the center (using white text for contrast)
+    // Number on piece
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -584,6 +586,8 @@ function handleBoardClick(e) {
   const moves = getMoveOptions(currentDiceRoll, currentTurn);
   if (moves.length === 0) {
     showTemporaryMessage("No moves. Passing turn...");
+    // Important: set nextPlayer before endTurn()
+    nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
     diceRolled = false;
     currentDiceRoll = 0;
     setTimeout(() => { endTurn(); }, 1000);
@@ -618,6 +622,7 @@ function handleBoardClick(e) {
 function endTurn() {
   diceRolled = false;
   currentDiceRoll = 0;
+  // Switch to nextPlayer after a short delay
   setTimeout(() => {
     currentTurn = nextPlayer;
     showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
@@ -668,10 +673,12 @@ function humanRollDice() {
   showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
   updateDiceRollDisplay();
   redrawPlayScreen();
+
   const options = getMoveOptions(currentDiceRoll, currentTurn);
   if (options.length === 0) {
-    if (debugMode) console.warn("No valid moves. Passing turn...");
+    // No valid moves, pass turn
     showTemporaryMessage("No moves. Passing turn...");
+    nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
     diceRolled = false;
     currentDiceRoll = 0;
     setTimeout(() => { endTurn(); }, 1000);
@@ -700,16 +707,16 @@ function aiMakeMove() {
     executeMove(pick.pieceIndex, pick.toPos, currentTurn);
     addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${pick.pieceIndex+1} from ${pick.fromPos} to ${pick.toPos}`);
     redrawPlayScreen();
-    // Only display "goes again" if extraTurn is true.
     if (extraTurn) {
       showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} goes again!`);
     }
     setTimeout(() => { endTurn(); }, 2000);
   } else {
+    // AI has no moves, pass turn
     showTemporaryMessage("AI has no moves. Passing turn...");
+    nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
     diceRolled = false;
     currentDiceRoll = 0;
-    currentTurn = (currentTurn === 'w') ? 'b' : 'w';
     endTurn();
   }
 }
