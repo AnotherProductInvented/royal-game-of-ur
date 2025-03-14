@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Another Product Invented – Pente Grammai</title>
+  <title>Another Product Invented: Royal Game of Ur</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <style>
     body {
       margin: 0;
       padding: 0;
-      background: #fff;
+      background: #fafafa;
       font-family: sans-serif;
       display: flex;
       flex-direction: column;
@@ -16,263 +17,825 @@
     h1 {
       margin: 1rem 0 0.5rem;
       text-align: center;
-      line-height: 1.2;
+      font-family: "Papyrus", cursive, serif;
     }
+    /* Wrapper for horizontal layout */
+    #gameWrapper {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 20px;
+      margin: 20px;
+      width: 100%;
+    }
+    /* Left Panel for dice */
+    #leftPanel {
+      min-width: 150px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Right Panel for move history */
+    #rightPanel {
+      min-width: 250px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Game container in the center */
     #gameContainer {
       position: relative;
-      width: 500px;
+      width: 1020px;
       max-width: 100%;
-      margin-bottom: 10px;
-      border: 2px solid #333;
-      background: #fafafa;
+      padding: 20px;
+      box-sizing: border-box;
+      background: #fff;
+      border: 4px double #8b4513;
+      border-radius: 6px;
     }
     canvas {
       display: block;
-      width: 100%;
-      height: auto;
-      background: #eee;
-      touch-action: none;
+      background: #f5f2e8;
+      margin: auto;
     }
-    #controls {
-      margin: 10px;
-      font-size: 16px;
+    /* Overlay screens */
+    .overlayScreen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: none;
+      background: rgba(255,255,255,0.95);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      z-index: 10;
+      font-family: "Papyrus", cursive, serif;
+      font-size: 24px;
+      color: #8b4513;
+      border: 4px double #8b4513;
+      border-radius: 6px;
+      padding: 20px;
+      box-sizing: border-box;
     }
-    #diceResult {
-      font-weight: bold;
-      margin-left: 10px;
+    button {
       font-size: 18px;
+      margin: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-family: "Papyrus", cursive, serif;
+    }
+    /* Dice Roll Display */
+    #diceRollDisplay {
+      font-size: 24px;
+      padding: 10px;
+      border: 2px solid #8b4513;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    #rollDiceBtn {
+      font-size: 16px;
+      padding: 6px 10px;
+      margin: 4px;
+    }
+    /* Move History in Right Panel */
+    #moveHistory {
+      font-size: 16px;
+      padding: 10px;
+      border: 2px solid #8b4513;
+      border-radius: 6px;
+      background: #fff;
+      max-height: 400px;
+      overflow-y: auto;
+      text-align: left;
+      width: 250px;
+    }
+    /* Temporary message overlay (2 seconds) */
+    #diceMessageOverlay {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.9);
+      border: 2px solid #8b4513;
+      border-radius: 6px;
+      font-family: "Papyrus", cursive, serif;
+      font-size: 28px;
+      color: #8b4513;
+      display: none;
+      z-index: 1500;
+    }
+    /* Loading overlay (unused) */
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      font-size: 24px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 1000;
+    }
+    .spinner {
+      border: 8px solid rgba(255,255,255,0.3);
+      border-top: 8px solid #fff;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #logo {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      max-width: 100px;
+      z-index: 2000;
     }
   </style>
 </head>
 <body>
 
-<h1>Another Product Invented<br>Pente Grammai</h1>
+<div id="gameWrapper">
+  <!-- Left Panel: Dice Roll Controls -->
+  <div id="leftPanel">
+    <div id="diceRollDisplay">Dice: -</div>
+    <button id="rollDiceBtn">Roll Dice</button>
+  </div>
 
-<div id="gameContainer">
-  <canvas id="gameCanvas" width="500" height="500"></canvas>
+  <!-- Center Panel: Game Container -->
+  <div id="gameContainer">
+    <div id="diceMessageOverlay"></div>
+  
+    <!-- Menu Screen -->
+    <div id="menuScreen" class="overlayScreen" style="display:flex;">
+      <h1>Another Product Invented<br>Royal Game of Ur</h1>
+      <button id="newGameBtn">New Game</button>
+      <button id="instructionsBtn">Instructions</button>
+    </div>
+
+    <!-- Instructions Screen -->
+    <div id="instructionsScreen" class="overlayScreen">
+      <p>
+        White goes first. Black goes second.<br>
+        Roll the dice.<br>
+        Click one of your pieces to move it.<br>
+        If you land on a square with your opponent's piece, it is moved back to the start.<br>
+        You cannot land on a square that is already occupied by your own piece.<br>
+        Landing on a rosette grants an extra turn and gives your piece immunity from being killed for as long as it is on a rosette.<br>
+        You must get an exact roll to move your piece through the finish line.<br>
+        If you have no valid moves, it is your opponent's turn.<br>
+        <br>
+        Press [M] to return to the Main Menu.
+      </p>
+    </div>
+
+    <!-- Side Selection Screen -->
+    <div id="sideScreen" class="overlayScreen">
+      <p>Choose Your Side:</p>
+      <button id="whiteSideBtn">White (You) [W]</button>
+      <button id="blackSideBtn">Black (You) [B]</button>
+      <p>(If you choose Black, White (AI) goes first.)</p>
+    </div>
+
+    <!-- Difficulty Selection Screen -->
+    <div id="difficultyScreen" class="overlayScreen">
+      <p>Select AI Difficulty:</p>
+      <button id="easyBtn">Easy</button>
+      <button id="mediumBtn">Medium</button>
+      <button id="hardBtn">Hard</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="overlayScreen">
+      <h2 id="gameOverText"></h2>
+      <button id="gameOverNewGameBtn">New Game</button>
+      <p>Press [M] to return to the Main Menu.</p>
+    </div>
+
+    <canvas id="gameCanvas" width="1000" height="600"></canvas>
+  </div>
+
+  <!-- Right Panel: Move History -->
+  <div id="rightPanel">
+    <div id="moveHistory">Moves:<br></div>
+  </div>
 </div>
 
-<div id="controls">
-  <button id="rollDiceBtn">Roll Dice</button>
-  <span>Dice: <span id="diceResult">0</span></span>
-</div>
+<img id="logo" src="logo.png" alt="Logo">
 
 <script>
-/*
-  We have 5 horizontal lines (0..4). We'll place 10 total pieces on line #2 (the middle line):
-    - 5 belong to the player (blue),
-    - 5 belong to the AI (red).
-
-  We'll represent each piece as { line: 2, col: someColumn, owner: 'player'/'ai' }.
-  We can move them left or right (for example) by the dice roll. This is a minimal approach.
-*/
-
+/***********************************
+ * 1) Canvas & Board Setup
+ ***********************************/
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const rollDiceBtn = document.getElementById("rollDiceBtn");
-const diceResultSpan = document.getElementById("diceResult");
+const canvasWidth = canvas.width;
+const canvasHeight = canvas.height;
 
-const width = canvas.width;
-const height = canvas.height;
+const SQUARE_SIZE = 50;
+const boardWidth = 400, boardHeight = 150;
+const boardMarginX = (canvasWidth - boardWidth) / 2;
+const boardMarginY = (canvasHeight - boardHeight) / 2;
 
-const NUM_LINES = 5;
-const COLS_PER_LINE = 11;  // Enough horizontal "spots" to move pieces
-const LINE_SPACING = height / (NUM_LINES + 1);
-const COL_SPACING = width / (COLS_PER_LINE + 1);
+/* Board squares with rosettes at positions 1,5,10,15,19 */
+const boardSquares = [
+  { x: 0,   y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 50,  y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true },
+  { x: 200, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 250, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 300, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 350, y: 0,   w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true },
+  { x: 0,   y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 50,  y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 100, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 150, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 200, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true },
+  { x: 250, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 300, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 350, y: 50,  w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 0,   y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 50,  y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true },
+  { x: 200, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 250, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 300, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: false },
+  { x: 350, y: 100, w: SQUARE_SIZE, h: SQUARE_SIZE, rosette: true }
+];
 
-let pieces = []; // Will store objects like { line, col, owner }
-let currentTurn = 'player';
-let diceValue = 0;
-let gameActive = true;
+/* Paths for pieces */
+const whitePath = [2, 3, 4, 5, 13, 12, 11, 10, 9, 8, 7, 6, 0, 1];
+const blackPath = [16, 17, 18, 19, 13, 12, 11, 10, 9, 8, 7, 6, 14, 15];
 
-// Initialize 10 total pieces in the middle line (#2).
-// We'll place the player's 5 pieces on columns 0..4 and the AI's 5 pieces on columns 6..10
-function initGame() {
-  pieces = [];
-  // Player pieces in columns 0..4
-  for (let c = 0; c < 5; c++) {
-    pieces.push({ line: 2, col: c, owner: 'player' });
+/***********************************
+ * 2) Game State Variables
+ ***********************************/
+let gameState = "menu";
+let humanColor = null;   // 'w' or 'b'
+let aiDifficulty = "easy"; // "easy", "medium", or "hard"
+let currentTurn = null;  // If human is white, white starts; otherwise AI (white) goes first.
+let currentDiceRoll = 0;
+let diceRolled = false;
+let extraTurn = false;
+let nextPlayer = null;
+const debugMode = true;
+const NUM_PIECES = 7;
+let whitePieces = [], blackPieces = [];
+let lastMove = null;
+let moveHistory = []; // store last 5 moves
+
+/***********************************
+ * 3) Overlays
+ ***********************************/
+const menuScreen = document.getElementById("menuScreen");
+const instructionsScreen = document.getElementById("instructionsScreen");
+const sideScreen = document.getElementById("sideScreen");
+const difficultyScreen = document.getElementById("difficultyScreen");
+const gameOverScreen = document.getElementById("gameOverScreen");
+const gameOverText = document.getElementById("gameOverText");
+const diceMessageOverlay = document.getElementById("diceMessageOverlay");
+
+/***********************************
+ * 4) Off-board & On-board Coordinates
+ ***********************************/
+function getPieceCoords(color, pieceIndex, pos) {
+  if (pos >= 0 && pos < 20) {
+    const sq = boardSquares[pos];
+    return { x: sq.x + boardMarginX + sq.w / 2, y: sq.y + boardMarginY + sq.h / 2 };
   }
-  // AI pieces in columns 6..10
-  for (let c = 6; c < 11; c++) {
-    pieces.push({ line: 2, col: c, owner: 'ai' });
+  if (pos === 20) {
+    const baseY = (color === 'w') ? 100 : 300;
+    return { x: boardMarginX + boardWidth + 80, y: boardMarginY + baseY + pieceIndex * 30 };
   }
-  currentTurn = 'player'; // Player starts
-  diceValue = 0;
-  gameActive = true;
-  drawBoard();
-}
-
-function drawBoard() {
-  ctx.clearRect(0, 0, width, height);
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-
-  // Draw the 5 horizontal lines
-  for (let i = 1; i <= NUM_LINES; i++) {
-    let y = LINE_SPACING * i;
-    ctx.beginPath();
-    ctx.moveTo(COL_SPACING, y);
-    ctx.lineTo(COL_SPACING * COLS_PER_LINE, y);
-    ctx.stroke();
-  }
-
-  // Draw pieces
-  pieces.forEach(p => {
-    drawPiece(p);
-  });
-}
-
-function drawPiece(piece) {
-  // Convert line+col into x,y
-  let y = LINE_SPACING * (piece.line + 1);
-  let x = COL_SPACING * (piece.col + 1);
-
-  ctx.beginPath();
-  ctx.arc(x, y, 12, 0, Math.PI * 2);
-  ctx.closePath();
-  if (piece.owner === 'player') {
-    ctx.fillStyle = 'blue';
-  } else {
-    ctx.fillStyle = 'red';
-  }
-  ctx.fill();
-  ctx.strokeStyle = '#000';
-  ctx.stroke();
-}
-
-// Basic dice roll: 1..6
-function rollDice() {
-  if (!gameActive) return;
-  if (diceValue !== 0) {
-    // Already rolled this turn
-    return;
-  }
-  let val = Math.floor(Math.random() * 6) + 1;
-  diceValue = val;
-  diceResultSpan.textContent = val.toString();
-  // If it's AI's turn, call AI logic
-  if (currentTurn === 'ai') {
-    setTimeout(aiMove, 800);
-  }
-}
-
-// Player's turn: they must click on a piece to move
-// We'll handle that in the canvas click
-canvas.addEventListener('click', e => {
-  if (!gameActive) return;
-  if (currentTurn !== 'player') return; // Only if it's player's turn
-  if (diceValue === 0) return;         // Must roll dice first
-
-  // Determine which piece was clicked
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-
-  // Find a piece belonging to 'player' that was clicked
-  for (let i = 0; i < pieces.length; i++) {
-    let p = pieces[i];
-    if (p.owner !== 'player') continue;
-    // Convert p.line, p.col to center
-    let cy = LINE_SPACING * (p.line + 1);
-    let cx = COL_SPACING * (p.col + 1);
-
-    let dx = mx - cx;
-    let dy = my - cy;
-    if (dx * dx + dy * dy <= 144) { // radius=12 => 12^2=144
-      // We clicked this piece
-      // Move it "to the right" by diceValue, if possible
-      let newCol = p.col + diceValue;
-      if (newCol >= COLS_PER_LINE) {
-        // Can't move off board => do nothing or handle "winning"
-        // For now just skip
-        console.log("Can't move off board.");
-        return;
-      }
-      // Check if new spot is occupied
-      if (pieces.some(pp => pp.line === p.line && pp.col === newCol)) {
-        console.log("That spot is occupied. Can't move.");
-        return;
-      }
-      // Move piece
-      p.col = newCol;
-      // Check if game is won? (Your rules)
-      // We'll skip that for now
-      diceValue = 0;
-      diceResultSpan.textContent = '0';
-      drawBoard();
-      // Switch turn
-      switchTurn();
-      return;
+  if (pos === -1) {
+    if (color === 'w') {
+      return { x: boardMarginX + pieceIndex * (SQUARE_SIZE + 5) + 20, y: boardMarginY - 60 };
+    } else {
+      return { x: boardMarginX + pieceIndex * (SQUARE_SIZE + 5) + 20, y: boardMarginY + boardHeight + 60 };
     }
   }
-});
-
-function switchTurn() {
-  if (!gameActive) return;
-  // If we had an extra turn, keep currentTurn
-  if (extraTurn) {
-    extraTurn = false;
-    console.log("Extra turn triggered, staying with " + currentTurn);
-    return;
-  }
-  currentTurn = (currentTurn === 'player') ? 'ai' : 'player';
-  if (currentTurn === 'ai') {
-    setTimeout(() => {
-      rollDice(); // AI auto-rolls
-    }, 500);
-  }
+  return { x: 0, y: 0 };
 }
 
-// AI logic
-function aiMove() {
-  if (!gameActive) return;
-  // AI picks a piece to move
-  let moves = getAIMoves();
-  if (moves.length === 0) {
-    // No moves => pass turn
-    console.log("AI can't move => pass turn");
-    diceValue = 0;
-    diceResultSpan.textContent = '0';
-    switchTurn();
-    return;
-  }
-  // Just pick first move for example
-  let move = moves[0];
-  move.piece.col = move.newCol;
-  diceValue = 0;
-  diceResultSpan.textContent = '0';
-  drawBoard();
-  switchTurn();
+function getHighlightBox(color, pieceIndex, pos) {
+  const c = getPieceCoords(color, pieceIndex, pos);
+  return { x: c.x - 20, y: c.y - 20, w: 40, h: 40 };
 }
 
-function getAIMoves() {
-  // Return all possible moves for AI
-  let moves = [];
-  pieces.forEach(p => {
-    if (p.owner !== 'ai') return;
-    let newCol = p.col - diceValue; // AI moves left, for example
-    if (newCol < 0) return;         // can't move off board
-    // Check if occupied
-    if (pieces.some(pp => pp.line === p.line && pp.col === newCol)) return;
-    moves.push({ piece: p, newCol });
+/***********************************
+ * 5) Initialization & Utility
+ ***********************************/
+function initPieces() {
+  whitePieces = Array(NUM_PIECES).fill(-1);
+  blackPieces = Array(NUM_PIECES).fill(-1);
+  lastMove = null;
+  moveHistory = [];
+  updateMoveHistoryDisplay();
+}
+
+function rollDice() {
+  let total = 0;
+  for (let i = 0; i < 4; i++) {
+    total += Math.floor(Math.random() * 2);
+  }
+  return total;
+}
+
+/***********************************
+ * 6) Path Logic
+ ***********************************/
+function getPath(color) {
+  return (color === 'w') ? whitePath : blackPath;
+}
+
+function getValidMove(piecePos, diceValue, color) {
+  if (diceValue === 0) return null;
+  const path = getPath(color);
+  let pathIndex = -1;
+  if (piecePos >= 0 && piecePos < 20) {
+    const idx = path.indexOf(piecePos);
+    if (idx === -1) {
+      if (debugMode) console.warn(`Piece pos ${piecePos} not in path for color=${color}`);
+      return null;
+    }
+    pathIndex = idx;
+  } else if (piecePos === 20) {
+    return null;
+  }
+  const newIndex = pathIndex + diceValue;
+  if (newIndex > path.length) return null;
+  if (newIndex === path.length) return 20;
+  return path[newIndex];
+}
+
+function canLandOn(pos, color) {
+  const own = (color === 'w') ? whitePieces : blackPieces;
+  const opp = (color === 'w') ? blackPieces : whitePieces;
+  if (pos < 20 && own.includes(pos)) return false;
+  if (pos < 20 && opp.includes(pos) && boardSquares[pos].rosette) return false;
+  return true;
+}
+
+function getMoveOptions(diceValue, color) {
+  const own = (color === 'w') ? whitePieces : blackPieces;
+  const moves = [];
+  own.forEach((pos, i) => {
+    if (pos === 20) return;
+    const target = getValidMove(pos, diceValue, color);
+    if (target !== null && canLandOn(target, color)) {
+      moves.push({ pieceIndex: i, fromPos: pos, toPos: target });
+    }
   });
   return moves;
 }
 
-// Minimal "can we move" check for the AI
-function canMove() {
-  // ...
+/***********************************
+ * 7) Move Execution & Highlight
+ ***********************************/
+function executeMove(pieceIndex, toPos, color) {
+  const own = (color === 'w') ? whitePieces : blackPieces;
+  const opp = (color === 'w') ? blackPieces : whitePieces;
+  const fromPos = own[pieceIndex];
+  own[pieceIndex] = toPos;
+  if (toPos < 20) {
+    const oppIdx = opp.indexOf(toPos);
+    if (oppIdx !== -1) {
+      opp[oppIdx] = -1;
+      addMoveToHistory(`${color === 'w' ? "White" : "Black"} captured on square #${toPos}`);
+    }
+  }
+  lastMove = { fromPos, toPos, color, pieceIndex };
+  addMoveToHistory(`${color === 'w' ? "White" : "Black"} moved piece #${pieceIndex+1} from ${fromPos} to ${toPos}`);
+  if (toPos < 20 && boardSquares[toPos].rosette) {
+    extraTurn = true;
+    nextPlayer = color;
+  } else {
+    extraTurn = false;
+    nextPlayer = (color === 'w') ? 'b' : 'w';
+  }
+  const finishedCount = own.filter(p => p === 20).length;
+  if (finishedCount === NUM_PIECES) {
+    gameOverText.textContent = (color === humanColor) ? "You Win!" : "You Lose!";
+    addMoveToHistory(`${color === 'w' ? "White" : "Black"} wins!`);
+    showGameOver();
+    return;
+  }
 }
 
-// Start
-initGame();
+function highlightLastMove() {
+  if (!lastMove) return;
+  const { fromPos, toPos, color, pieceIndex } = lastMove;
+  if (fromPos >= 0 && fromPos < 20) {
+    const sq = boardSquares[fromPos];
+    ctx.fillStyle = "rgba(255,255,0,0.5)";
+    ctx.fillRect(sq.x + boardMarginX, sq.y + boardMarginY, sq.w, sq.h);
+  } else {
+    const box = getHighlightBox(color, pieceIndex, fromPos);
+    ctx.fillStyle = "rgba(255,255,0,0.5)";
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+  }
+  if (toPos >= 0 && toPos < 20) {
+    const sq2 = boardSquares[toPos];
+    ctx.fillStyle = "rgba(0,128,255,0.5)";
+    ctx.fillRect(sq2.x + boardMarginX, sq2.y + boardMarginY, sq2.w, sq2.h);
+  } else {
+    const box2 = getHighlightBox(color, pieceIndex, toPos);
+    ctx.fillStyle = "rgba(0,128,255,0.5)";
+    ctx.fillRect(box2.x, box2.y, box2.w, box2.h);
+  }
+}
 
-rollDiceBtn.addEventListener('click', () => {
-  if (currentTurn === 'player') {
-    rollDice();
+/***********************************
+ * 8) Drawing
+ ***********************************/
+function drawFancySquare(x, y, w, h) {
+  const cx = x + w/2, cy = y + h/2;
+  const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 45);
+  grad.addColorStop(0, "#c2a676");
+  grad.addColorStop(0.5, "#8b6f47");
+  grad.addColorStop(1, "#6b4e2e");
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x, y, w, h);
+}
+
+function drawStar(cx, cy, spikes, outerRadius, innerRadius, fillColor, strokeColor, lineWidth) {
+  const angle = Math.PI / spikes;
+  ctx.beginPath();
+  for (let i = 0; i < 2 * spikes; i++) {
+    const r = (i % 2 === 0) ? outerRadius : innerRadius;
+    const px = cx + r * Math.cos(i * angle);
+    const py = cy + r * Math.sin(i * angle);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  if (strokeColor) {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+}
+
+function drawBoard() {
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  highlightLastMove();
+  boardSquares.forEach(sq => {
+    const drawX = sq.x + boardMarginX;
+    const drawY = sq.y + boardMarginY;
+    drawFancySquare(drawX, drawY, sq.w, sq.h);
+    if (sq.rosette) {
+      ctx.save();
+      ctx.translate(drawX + sq.w/2, drawY + sq.h/2);
+      drawStar(0, 0, 8, 10, 5, "#e94", "#fff", 2);
+      ctx.restore();
+    }
+  });
+}
+
+function drawPieces() {
+  whitePieces.forEach((pos, i) => {
+    if (pos === 20) return;
+    const c = getPieceCoords('w', i, pos);
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.4)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 3;
+    const grad = ctx.createRadialGradient(c.x - 5, c.y - 5, 5, c.x, c.y, 18);
+    grad.addColorStop(0, "#fffaf0");
+    grad.addColorStop(1, "#dcd0ba");
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 18, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = "bold 14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#000";
+    ctx.fillText(i+1, c.x, c.y);
+    ctx.restore();
+  });
+  blackPieces.forEach((pos, i) => {
+    if (pos === 20) return;
+    const c = getPieceCoords('b', i, pos);
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 3;
+    const grad = ctx.createRadialGradient(c.x - 5, c.y - 5, 5, c.x, c.y, 18);
+    grad.addColorStop(0, "#666666");
+    grad.addColorStop(1, "#000000");
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 18, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = "bold 14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(i+1, c.x, c.y);
+    ctx.restore();
+  });
+}
+
+function drawUI() {
+  ctx.fillStyle = "#f5f2e8";
+  ctx.fillRect(0, canvasHeight - 30, canvasWidth, canvasHeight);
+  ctx.strokeStyle = "#000";
+  ctx.strokeRect(0, canvasHeight - 30, canvasWidth, 30);
+}
+
+function redrawPlayScreen() {
+  drawBoard();
+  drawPieces();
+  drawUI();
+  updateDiceRollDisplay();
+  updateMoveHistoryDisplay();
+}
+
+/***********************************
+ * 9) Turn End & Next Turn
+ * isHumanTurn: true if the turn that just ended was human's.
+ ***********************************/
+function endTurn(isHumanTurn) {
+  diceRolled = false;
+  currentDiceRoll = 0;
+  // Delay depends on whose turn just ended:
+  let delay = isHumanTurn ? 1000 : 2000;
+  setTimeout(() => {
+    currentTurn = nextPlayer;
+    showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
+    redrawPlayScreen();
+    if (currentTurn !== humanColor) {
+      setTimeout(() => { aiAutoRoll(); }, 2000);
+    }
+  }, delay);
+}
+
+/***********************************
+ * 10) Messages & Move History
+ ***********************************/
+function showTemporaryMessage(msg) {
+  diceMessageOverlay.textContent = msg;
+  diceMessageOverlay.style.display = "block";
+  setTimeout(() => {
+    diceMessageOverlay.style.display = "none";
+  }, 2000); // 2 seconds for all signs
+}
+
+function updateDiceRollDisplay() {
+  document.getElementById("diceRollDisplay").textContent = `Dice: ${currentDiceRoll || "-"}`;
+}
+
+function addMoveToHistory(moveText) {
+  moveHistory.push(moveText);
+  if (moveHistory.length > 5) {
+    moveHistory.shift();
+  }
+  updateMoveHistoryDisplay();
+}
+
+function updateMoveHistoryDisplay() {
+  document.getElementById("moveHistory").innerHTML = "Moves:<br>" + moveHistory.join("<br>");
+}
+
+/***********************************
+ * 11) Human Turn: Rolling Dice
+ ***********************************/
+function humanRollDice() {
+  if (gameState !== "playing") return;
+  if (currentTurn !== humanColor) return;
+  if (diceRolled) return;
+  currentDiceRoll = rollDice();
+  diceRolled = true;
+  addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
+  showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
+  updateDiceRollDisplay();
+  redrawPlayScreen();
+  const options = getMoveOptions(currentDiceRoll, currentTurn);
+  if (options.length === 0) {
+    showTemporaryMessage("No moves. Passing turn...");
+    nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
+    diceRolled = false;
+    currentDiceRoll = 0;
+    endTurn(true);
+    return;
+  }
+  // Even if exactly one move exists, require the human to click a piece.
+}
+
+/***********************************
+ * 12) Human Clicking the Board
+ ***********************************/
+function handleBoardClick(e) {
+  if (gameState !== "playing") return;
+  if (currentTurn !== humanColor) return;
+  if (!diceRolled) return;
+  const moves = getMoveOptions(currentDiceRoll, currentTurn);
+  if (moves.length === 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const own = (currentTurn === 'w') ? whitePieces : blackPieces;
+  for (let i = 0; i < own.length; i++) {
+    const pos = own[i];
+    if (pos === 20) continue;
+    const c = getPieceCoords(currentTurn, i, pos);
+    const dx = mx - c.x, dy = my - c.y;
+    if (Math.sqrt(dx * dx + dy * dy) <= 18) {
+      const found = moves.find(m => m.pieceIndex === i);
+      if (!found) return;
+      executeMove(i, found.toPos, currentTurn);
+      redrawPlayScreen();
+      showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} moved piece #${i+1}`);
+      endTurn(true);
+      return;
+    }
+  }
+}
+
+/***********************************
+ * 13) AI Turn
+ ***********************************/
+function aiAutoRoll() {
+  if (gameState !== "playing") return;
+  if (currentTurn === humanColor) return;
+  if (!diceRolled) {
+    currentDiceRoll = rollDice();
+    diceRolled = true;
+    addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
+    showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} rolled ${currentDiceRoll}`);
+    updateDiceRollDisplay();
+    redrawPlayScreen();
+    // Delay 2 seconds to show roll before moving
+    setTimeout(aiMakeMove, 2000);
+  }
+}
+
+function aiMakeMove() {
+  const options = getMoveOptions(currentDiceRoll, currentTurn);
+  if (options.length === 0) {
+    showTemporaryMessage("AI has no moves. Passing turn...");
+    nextPlayer = (currentTurn === 'w') ? 'b' : 'w';
+    diceRolled = false;
+    currentDiceRoll = 0;
+    endTurn(false);
+    return;
+  }
+  const pick = options[Math.floor(Math.random() * options.length)];
+  executeMove(pick.pieceIndex, pick.toPos, currentTurn);
+  redrawPlayScreen();
+  if (extraTurn) {
+    showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} goes again!`);
+    diceRolled = false;
+    currentDiceRoll = 0;
+    aiAutoRoll();
+  } else {
+    endTurn(false);
+  }
+}
+
+/***********************************
+ * 14) Main Loop
+ ***********************************/
+function mainLoop() {
+  if (gameState === "playing") {
+    redrawPlayScreen();
+    document.getElementById("rollDiceBtn").style.display = (currentTurn === humanColor) ? "inline-block" : "none";
+  }
+  requestAnimationFrame(mainLoop);
+}
+
+/***********************************
+ * 15) Overlays & Navigation
+ ***********************************/
+function hideAllScreens() {
+  menuScreen.style.display = "none";
+  instructionsScreen.style.display = "none";
+  sideScreen.style.display = "none";
+  difficultyScreen.style.display = "none";
+  gameOverScreen.style.display = "none";
+}
+
+function showMenu() {
+  hideAllScreens();
+  gameState = "menu";
+  menuScreen.style.display = "flex";
+}
+
+function showInstructions() {
+  hideAllScreens();
+  gameState = "instructions";
+  instructionsScreen.style.display = "flex";
+}
+
+function showSideSelect() {
+  hideAllScreens();
+  gameState = "selectSide";
+  sideScreen.style.display = "flex";
+}
+
+function showDifficultyScreen() {
+  hideAllScreens();
+  gameState = "selectDifficulty";
+  difficultyScreen.style.display = "flex";
+}
+
+function setDifficulty(d) {
+  aiDifficulty = d;
+  startPlaying();
+}
+
+function startPlaying() {
+  hideAllScreens();
+  gameState = "playing";
+  initPieces();
+  currentTurn = (humanColor === 'w') ? 'w' : 'w'; // white always starts
+  diceRolled = false;
+  currentDiceRoll = 0;
+  extraTurn = false;
+  addMoveToHistory(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
+  showTemporaryMessage(`${(currentTurn === 'w' ? "White" : "Black")} Turn! Roll dice...`);
+  redrawPlayScreen();
+  if (currentTurn !== humanColor) {
+    aiAutoRoll();
+  }
+}
+
+function showGameOver() {
+  hideAllScreens();
+  gameState = "gameover";
+  gameOverScreen.style.display = "flex";
+}
+
+/***********************************
+ * 16) Buttons & Keyboard
+ ***********************************/
+document.getElementById("whiteSideBtn").onclick = () => {
+  humanColor = 'w';
+  showDifficultyScreen();
+};
+document.getElementById("blackSideBtn").onclick = () => {
+  humanColor = 'b';
+  showDifficultyScreen();
+};
+document.getElementById("easyBtn").onclick = () => setDifficulty("easy");
+document.getElementById("mediumBtn").onclick = () => setDifficulty("medium");
+document.getElementById("hardBtn").onclick = () => setDifficulty("hard");
+
+document.getElementById("newGameBtn").onclick = () => showSideSelect();
+document.getElementById("instructionsBtn").onclick = () => showInstructions();
+document.getElementById("gameOverNewGameBtn").onclick = () => showSideSelect();
+document.getElementById("rollDiceBtn").addEventListener("click", humanRollDice);
+
+document.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+  if (gameState === "selectSide") {
+    if (key === "w") document.getElementById("whiteSideBtn").click();
+    else if (key === "b") document.getElementById("blackSideBtn").click();
+  } else if (gameState === "selectDifficulty") {
+    if (key === "e") setDifficulty("easy");
+    else if (key === "m") setDifficulty("medium");
+    else if (key === "h") setDifficulty("hard");
+  } else if (gameState === "playing") {
+    if (key === "r" && currentTurn === humanColor && !diceRolled) {
+      humanRollDice();
+    } else if (key === "m") {
+      initPieces();
+      showMenu();
+    }
+  } else if (["instructions", "gameover"].includes(gameState)) {
+    if (key === "m") {
+      initPieces();
+      showMenu();
+    }
   }
 });
+
+canvas.addEventListener("mousedown", handleBoardClick);
+
+function startAll() {
+  showMenu();
+  requestAnimationFrame(mainLoop);
+}
+window.addEventListener("load", startAll);
 </script>
 </body>
 </html>
